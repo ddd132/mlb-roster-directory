@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101d2e">
+  <meta name="description" content="MLB 球員的逐年打擊、投球與守備成績。">
+  <title>球員歷年成績｜大聯盟球員圖鑑</title>
+  <link rel="icon" href="assets/baseball.png" type="image/png">
+  <link rel="preload" href="assets/inter.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preconnect" href="https://statsapi.mlb.com" crossorigin>
+  <link rel="preconnect" href="https://img.mlbstatic.com" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="player.css">
+  <script type="module" src="player.js"></script>
+</head>
+<body class="profile-page">
+  <a class="skip-link" href="#season-stats">跳到歷年成績</a>
+  <header class="site-header">
+    <div class="shell profile-header">
+      <a class="brand" href="./" aria-label="球員圖鑑首頁">
+        <img class="brand-mark" src="assets/baseball.png" alt="" width="36" height="36">
+        <span>球員圖鑑</span>
+      </a>
+      <a class="profile-back" id="back-to-roster" href="./#roster">回球隊名單</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="profile-hero" aria-labelledby="player-name" id="profile-hero">
+      <div class="shell profile-hero-inner" id="profile-identity">
+        <h1 id="player-name">球員資料</h1>
+      </div>
+    </section>
+
+    <div class="shell profile-body">
+      <section id="season-stats" aria-labelledby="stats-title">
+        <div class="stats-heading">
+          <h2 id="stats-title">歷年成績</h2>
+          <a class="source-link" id="official-profile" href="https://www.mlb.com/players" target="_blank" rel="noopener noreferrer" hidden>MLB 球員頁 <span class="icon icon-external" aria-hidden="true"></span></a>
+        </div>
+        <div class="stats-tools">
+          <div class="scope-switch" id="scope-switch" role="group" aria-label="賽事層級">
+            <button type="button" data-scope="regular" aria-pressed="true">MLB 例行賽</button>
+            <button type="button" data-scope="postseason" aria-pressed="false">MLB 季後賽</button>
+            <button type="button" data-scope="minors" aria-pressed="false">小聯盟</button>
+          </div>
+          <div class="scope-switch" id="stats-mode" role="group" aria-label="成績表內容" hidden>
+            <button type="button" data-view="standard" aria-pressed="true">基本成績</button>
+            <button type="button" data-view="advanced" aria-pressed="false">進階數據</button>
+          </div>
+          <label class="split-toggle" id="split-toggle" hidden>
+            <input type="checkbox" id="split-check">顯示分隊成績
+          </label>
+        </div>
+        <div id="stat-sections" aria-busy="true">
+          <p class="loading-message">正在讀取 MLB 逐年數據…</p>
+        </div>
+      </section>
+
+      <details class="profile-bio" id="bio-details" hidden>
+        <summary>球員基本資料 <span class="icon icon-chevron" aria-hidden="true"></span></summary>
+        <dl class="bio-grid" id="bio-grid"></dl>
+      </details>
+      <noscript><p>啟用 JavaScript 即可查閱逐年成績。</p></noscript>
+    </div>
+  </main>
+  <footer class="site-footer">
+    <div class="shell footer-inner profile-footer">
+      <p>逐年成績來自 <a href="https://www.mlb.com/stats/" target="_blank" rel="noopener noreferrer">MLB 官方資料</a>。賽季按年份由新到舊排列。</p>
+      <a class="top-link" href="#" aria-label="回到頁首">回到頂端 <span class="icon icon-up" aria-hidden="true"></span></a>
+    </div>
+  </footer>
+</body>
+</html>

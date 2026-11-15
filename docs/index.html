@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101d2e">
+  <meta name="description" content="查詢 MLB 30 支球隊的官方 40 人名單與球員基本資料。按球隊瀏覽，或跨隊搜尋球員。">
+  <title>球員圖鑑｜MLB 40 人名單</title>
+  <link rel="icon" href="assets/baseball.png" type="image/png">
+  <link rel="preload" href="assets/inter.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preconnect" href="https://img.mlbstatic.com" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body id="top">
+  <a class="skip-link" href="#roster">跳到球員名單</a>
+  <header class="site-header">
+    <div class="shell header-inner">
+      <a class="brand" href="./" aria-label="球員圖鑑首頁">
+        <img class="brand-mark" src="assets/baseball.png" alt="" width="36" height="36">
+        <span>球員圖鑑</span>
+      </a>
+      <nav aria-label="主要導覽" class="header-nav">
+        <a class="nav-current" href="#roster">球隊名單</a>
+        <a href="#sources" class="source-nav">資料來源</a>
+      </nav>
+      <details class="downloads" id="downloads">
+        <summary><span class="icon icon-download" aria-hidden="true"></span>下載資料</summary>
+        <div class="download-menu">
+          <a href="data/mlb-40-man.csv" data-export="csv" download="mlb-40-man.csv">CSV <span>試算表</span></a>
+          <a href="data/rosters.json" data-export="json" download="rosters.json">JSON <span>結構化資料</span></a>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="page-title">
+      <div class="hero-image" aria-hidden="true"></div>
+      <div class="shell hero-inner">
+        <div class="hero-copy">
+          <p class="eyebrow"><span></span><b id="season">2026</b> SEASON <span class="eyebrow-divider"></span> 40-MAN ROSTER</p>
+          <h1 id="page-title">大聯盟球員圖鑑</h1>
+          <p class="hero-description">一次查齊 MLB 各隊的 40 人名單與球員基本資料。</p>
+          <form class="search-form" id="player-search" role="search">
+            <label for="search-input" class="visually-hidden">搜尋全部球隊的球員</label>
+            <span class="icon icon-search" aria-hidden="true"></span>
+            <input id="search-input" name="q" type="search" autocomplete="off" spellcheck="false" placeholder="搜尋球員姓名（Ohtani、大谷翔平）" disabled>
+            <button type="button" id="clear-search" class="search-clear" aria-label="清除搜尋" hidden><span class="icon icon-close" aria-hidden="true"></span></button>
+            <button class="search-submit" type="submit" disabled>搜尋</button>
+          </form>
+        </div>
+        <div class="hero-facts" aria-label="名單涵蓋範圍">
+          <div class="fact-numbers">
+            <div class="fact"><strong id="team-total">–</strong><span>支球隊</span></div>
+            <div class="fact"><strong id="player-total">–</strong><span>位球員</span></div>
+          </div>
+          <div class="fact-date" id="live-status"><span class="fact-dot"></span><time id="hero-date"></time><span id="live-status-text">MLB 官方資料</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="shell directory" id="roster">
+      <aside class="teams-panel" aria-labelledby="teams-title">
+        <h2 id="teams-title">瀏覽球隊</h2>
+        <div class="desktop-teams">
+          <div class="league-switch" id="league-switch" role="group" aria-label="聯盟">
+            <button type="button" data-league="NL" aria-pressed="true" disabled>國家聯盟</button>
+            <button type="button" data-league="AL" aria-pressed="false" disabled>美國聯盟</button>
+          </div>
+          <div class="division-list" id="division-list"></div>
+        </div>
+        <label for="team-select" class="mobile-teams visually-hidden">選擇球隊</label>
+        <select id="team-select" class="mobile-teams team-select" disabled></select>
+      </aside>
+
+      <section class="roster-main" id="roster-main" aria-labelledby="roster-title" aria-busy="true">
+        <div id="view-heading" class="view-heading">
+          <h2 id="roster-title" tabindex="-1">球員名單</h2>
+        </div>
+        <div class="roster-toolbar" id="roster-toolbar" hidden>
+          <div id="position-filters" class="position-filters" role="group" aria-label="依守備位置篩選">
+            <button type="button" data-position="all" aria-pressed="true">全部 <span></span></button>
+            <button type="button" data-position="pitcher" aria-pressed="false">投手 <span></span></button>
+            <button type="button" data-position="catcher" aria-pressed="false">捕手 <span></span></button>
+            <button type="button" data-position="infield" aria-pressed="false">內野 <span></span></button>
+            <button type="button" data-position="outfield" aria-pressed="false">外野 <span></span></button>
+            <button type="button" data-position="other" aria-pressed="false">DH／二刀流 <span></span></button>
+          </div>
+          <div class="sort-control">
+            <label for="sort-select" class="visually-hidden">排序</label>
+            <select id="sort-select">
+              <option value="jersey">依背號排序</option>
+              <option value="name">依英文姓名</option>
+              <option value="age">依年齡排序</option>
+            </select>
+          </div>
+        </div>
+        <p id="results-status" class="visually-hidden" role="status" aria-live="polite"></p>
+        <div id="player-results" class="player-results">
+          <p class="loading-message">正在載入 MLB 名單…</p>
+        </div>
+        <noscript><p>啟用 JavaScript 即可瀏覽球隊，也可以直接下載 <a href="data/mlb-40-man.csv" download>完整 CSV 名單</a>。</p></noscript>
+      </section>
+    </div>
+  </main>
+
+  <footer id="sources" class="site-footer">
+    <div class="shell footer-inner">
+      <div>
+        <h2>資料來源</h2>
+        <p>名單由 <a href="https://www.mlb.com/team" target="_blank" rel="noopener noreferrer">MLB 官方資料</a>彙整。依 <a href="https://www.mlb.com/glossary/transactions/40-man-roster" target="_blank" rel="noopener noreferrer">40 人名單規則</a>計算，60 天傷兵不計入。</p>
+        <p>開啟頁面後，網站在前景每 2 分鐘查詢 MLB 官方名單。頁首時間採台灣時間。</p>
+        <p class="photo-credit">球場照片 <a href="https://commons.wikimedia.org/wiki/File:Dodger_Stadium_Field.jpg" target="_blank" rel="noopener noreferrer">Jesuiseduardo／Wikimedia Commons</a>，<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>，經縮放及裁切。</p>
+      </div>
+      <a class="top-link" href="#top">回到頂端 <span class="icon icon-up" aria-hidden="true"></span></a>
+    </div>
+  </footer>
+
+</body>
+</html>
