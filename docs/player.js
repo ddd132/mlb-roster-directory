@@ -1,6 +1,7 @@
 import { countryName, escape, fetchPerson, fetchSeasonStats, fetchSnapshot, handedness, installPhotoFallback, normalizePerson, readLastRoster, teamLogo } from "./mlb.js";
 
 import { advancedDefinitions, loadAdvanced, seasonMetrics } from "./advanced.js";
+import { renderPercentiles } from "./percentiles.js?v=1";
 
 const byId = id => document.getElementById(id);
 const scopeButtons = byId("scope-switch");
@@ -20,7 +21,7 @@ let activeScope = "";
 let activeRows = [];
 let activePlayer;
 let identityReady;
-let statsView = params.get("view") === "advanced" ? "advanced" : "standard";
+let statsView = ["advanced", "percentiles"].includes(params.get("view")) ? params.get("view") : "standard";
 let advancedRequest;
 let advancedData;
 
@@ -225,20 +226,32 @@ function currentViewIsAdvanced() {
 function setStatsView(view) {
   statsView = view;
   const url = new URL(location.href);
-  if (view === "advanced") url.searchParams.set("view", view);
-  else url.searchParams.delete("view");
+  if (view === "standard") url.searchParams.delete("view");
+  else url.searchParams.set("view", view);
   history.replaceState(null, "", url);
+  if (view === "percentiles" && activeScope !== "regular") {
+    void selectScope("regular");
+    return;
+  }
   if (statSections.getAttribute("aria-busy") === "false") renderStats();
 }
 
 function renderStats() {
   const visible = activeRows.filter(keepRow);
   const regularAdvanced = visible.filter(row => Object.hasOwn(advancedDefinitions, row.group));
-  statsMode.hidden = activeScope !== "regular" || !regularAdvanced.length;
+  const regular = activeScope === "regular";
+  const view = regular ? statsView : "standard";
+  statsMode.hidden = false;
+  statsMode.querySelector('[data-view="advanced"]').hidden = !regular || !regularAdvanced.length;
   for (const button of statsMode.querySelectorAll("[data-view]")) {
-    button.setAttribute("aria-pressed", String(button.dataset.view === statsView));
+    button.setAttribute("aria-pressed", String(!button.hidden && button.dataset.view === view));
   }
-  const advanced = !statsMode.hidden && currentViewIsAdvanced();
+  if (view === "percentiles") {
+    byId("split-toggle").hidden = true;
+    renderPercentiles(statSections, playerId, regularAdvanced);
+    return;
+  }
+  const advanced = view === "advanced" && regularAdvanced.length > 0;
   const rows = advanced ? regularAdvanced : visible;
   byId("split-toggle").hidden = advanced || !hasTeamSplits(visible);
   if (!rows.length) {

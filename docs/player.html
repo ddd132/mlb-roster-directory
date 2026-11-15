@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101d2e">
-  <meta name="description" content="MLB 球員的逐年打擊、投球與守備成績。">
+  <meta name="description" content="MLB 球員的逐年成績與聯盟百分位。">
   <title>球員歷年成績｜大聯盟球員圖鑑</title>
   <link rel="icon" href="assets/baseball.png" type="image/png">
   <link rel="preload" href="assets/inter.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preconnect" href="https://statsapi.mlb.com" crossorigin>
   <link rel="preconnect" href="https://img.mlbstatic.com" crossorigin>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="player.css">
-  <script type="module" src="player.js?v=2"></script>
+  <link rel="stylesheet" href="player.css?v=3">
+  <script type="module" src="player.js?v=3"></script>
 </head>
 <body class="profile-page">
   <a class="skip-link" href="#season-stats">跳到歷年成績</a>
@@ -45,9 +45,10 @@
             <button type="button" data-scope="postseason" aria-pressed="false">MLB 季後賽</button>
             <button type="button" data-scope="minors" aria-pressed="false">小聯盟</button>
           </div>
-          <div class="scope-switch" id="stats-mode" role="group" aria-label="成績表內容" hidden>
+          <div class="scope-switch" id="stats-mode" role="group" aria-label="成績檢視方式" hidden>
             <button type="button" data-view="standard" aria-pressed="true">基本成績</button>
             <button type="button" data-view="advanced" aria-pressed="false">進階數據</button>
+            <button type="button" data-view="percentiles" aria-pressed="false">聯盟百分位</button>
           </div>
           <label class="split-toggle" id="split-toggle" hidden>
             <input type="checkbox" id="split-check">顯示分隊成績
