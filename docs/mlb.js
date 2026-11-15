@@ -5,6 +5,9 @@ const ROSTER_FIELDS = "teamId,rosterType,roster,person,id,fullName,position,code
 const LIVE_CACHE_KEY = "mlb-40-man-latest-v2";
 const MINOR_LEVELS = [11, 12, 13, 14, 15, 16];
 const dateFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" });
+const transactionDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit",
+});
 const clockFormatter = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit",
   hour: "2-digit", minute: "2-digit", hourCycle: "h23",
@@ -224,6 +227,18 @@ async function fetchPerson(id) {
   return person;
 }
 
+async function fetchTeamTransactions(teamId, days, now = new Date()) {
+  const { year, month, day } = formattedParts(transactionDateFormatter, now);
+  const end = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  const start = new Date(end.getTime() - (days - 1) * 86_400_000);
+  const startDate = start.toISOString().slice(0, 10);
+  const endDate = end.toISOString().slice(0, 10);
+  const payload = await requestJson(apiUrl("/transactions", { teamId, sportId: 1, startDate, endDate }));
+  if (!Array.isArray(payload.transactions)) throw new Error("MLB did not return team transactions");
+  return payload.transactions.filter(row => Number.isSafeInteger(row?.id)
+    && /^\d{4}-\d{2}-\d{2}$/.test(row.date) && row.date >= startDate && row.date <= endDate);
+}
+
 async function fetchSeasonStats(id, scope, stats = "yearByYear") {
   const gameType = scope === "postseason" ? "P" : "R";
   const sportIds = scope === "minors" ? MINOR_LEVELS : [1];
@@ -275,4 +290,4 @@ function installPhotoFallback() {
   }, true);
 }
 
-export { countryName, escape, fetchLiveRoster, fetchPerson, fetchSeasonStats, fetchSnapshot, handedness, installPhotoFallback, normalizePerson, readLastRoster, rememberRoster, rosterCsv, taipeiTime, teamLogo };
+export { countryName, escape, fetchLiveRoster, fetchPerson, fetchSeasonStats, fetchSnapshot, fetchTeamTransactions, handedness, installPhotoFallback, normalizePerson, readLastRoster, rememberRoster, rosterCsv, taipeiTime, teamLogo };

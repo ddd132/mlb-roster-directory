@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101d2e">
-  <meta name="description" content="查詢 MLB 30 支球隊的官方 40 人名單與球員基本資料。按球隊瀏覽，或跨隊搜尋球員。">
+  <meta name="description" content="查詢 MLB 30 支球隊的官方 40 人名單、球員資料與升降、交易等球隊異動。">
   <title>球員圖鑑｜MLB 40 人名單</title>
   <link rel="icon" href="assets/baseball.png" type="image/png">
   <link rel="preload" href="assets/inter.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preconnect" href="https://img.mlbstatic.com" crossorigin>
-  <link rel="stylesheet" href="styles.css">
-  <script type="module" src="app.js"></script>
+  <link rel="stylesheet" href="styles.css?v=2">
+  <script type="module" src="app.js?v=2"></script>
 </head>
 <body id="top">
   <a class="skip-link" href="#roster">跳到球員名單</a>
@@ -21,7 +21,8 @@
         <span>球員圖鑑</span>
       </a>
       <nav aria-label="主要導覽" class="header-nav">
-        <a class="nav-current" href="#roster">球隊名單</a>
+        <a class="nav-current" href="#roster" data-team-view="roster">球隊名單</a>
+        <a href="?view=transactions#roster" data-team-view="transactions">球隊異動</a>
         <a href="#sources" class="source-nav">資料來源</a>
       </nav>
       <details class="downloads" id="downloads">
@@ -78,6 +79,10 @@
         <div id="view-heading" class="view-heading">
           <h2 id="roster-title" tabindex="-1">球員名單</h2>
         </div>
+        <div class="team-view-switch" id="team-view-switch" role="group" aria-label="查看球隊資料" hidden>
+          <button type="button" data-team-view="roster" aria-pressed="true">40 人名單</button>
+          <button type="button" data-team-view="transactions" aria-pressed="false">球隊異動</button>
+        </div>
         <div class="roster-toolbar" id="roster-toolbar" hidden>
           <div id="position-filters" class="position-filters" role="group" aria-label="依守備位置篩選">
             <button type="button" data-position="all" aria-pressed="true">全部 <span></span></button>
@@ -100,6 +105,33 @@
         <div id="player-results" class="player-results">
           <p class="loading-message">正在載入 MLB 名單…</p>
         </div>
+        <section id="transactions-panel" aria-label="球隊異動" hidden>
+          <div class="roster-toolbar transaction-toolbar">
+            <div class="position-filters" id="transaction-filters" role="group" aria-label="異動類型">
+              <button type="button" data-transaction-filter="all" aria-pressed="true">全部</button>
+              <button type="button" data-transaction-filter="roster" aria-pressed="false">升降</button>
+              <button type="button" data-transaction-filter="trade" aria-pressed="false">交易</button>
+              <button type="button" data-transaction-filter="injury" aria-pressed="false">傷兵</button>
+              <button type="button" data-transaction-filter="waivers" aria-pressed="false">DFA／讓渡</button>
+              <button type="button" data-transaction-filter="contracts" aria-pressed="false">簽約／離隊</button>
+              <button type="button" data-transaction-filter="other" aria-pressed="false">其他</button>
+            </div>
+            <div class="sort-control">
+              <label for="transaction-period" class="visually-hidden">異動日期範圍</label>
+              <select id="transaction-period">
+                <option value="30">近 30 天</option>
+                <option value="90">近 90 天</option>
+                <option value="365">近一年</option>
+              </select>
+            </div>
+          </div>
+          <div class="transaction-status-line">
+            <p id="transaction-status" class="transaction-status" role="status"></p>
+            <button type="button" id="transaction-retry" class="source-link" hidden>重新查詢</button>
+          </div>
+          <div id="transaction-results"></div>
+          <button type="button" id="transaction-more" class="show-more" hidden></button>
+        </section>
         <noscript><p>啟用 JavaScript 即可瀏覽球隊，也可以直接下載 <a href="data/mlb-40-man.csv" download>完整 CSV 名單</a>。</p></noscript>
       </section>
     </div>
@@ -111,6 +143,7 @@
         <h2>資料來源</h2>
         <p>名單由 <a href="https://www.mlb.com/team" target="_blank" rel="noopener noreferrer">MLB 官方資料</a>彙整。依 <a href="https://www.mlb.com/glossary/transactions/40-man-roster" target="_blank" rel="noopener noreferrer">40 人名單規則</a>計算，60 天傷兵不計入。</p>
         <p>開啟頁面後，網站在前景每 2 分鐘查詢 MLB 官方名單。頁首時間採台灣時間。</p>
+        <p>球隊異動的日期依 MLB 官方紀錄。「球隊異動」開啟時在前景每 2 分鐘查詢一次。</p>
         <p class="photo-credit">球場照片 <a href="https://commons.wikimedia.org/wiki/File:Dodger_Stadium_Field.jpg" target="_blank" rel="noopener noreferrer">Jesuiseduardo／Wikimedia Commons</a>，<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>，經縮放及裁切。</p>
       </div>
       <a class="top-link" href="#top">回到頂端 <span class="icon icon-up" aria-hidden="true"></span></a>

@@ -1,4 +1,5 @@
-import { countryName, escape, fetchLiveRoster, fetchSnapshot, installPhotoFallback, readLastRoster, rememberRoster, rosterCsv, taipeiTime, teamLogo as logo } from "./mlb.js";
+import { countryName, escape, fetchLiveRoster, fetchSnapshot, installPhotoFallback, readLastRoster, rememberRoster, rosterCsv, taipeiTime, teamLogo as logo } from "./mlb.js?v=2";
+import { createTransactionsView, officialTransactionsUrl } from "./transactions.js";
 
 const byId = id => document.getElementById(id);
 const searchForm = byId("player-search");
@@ -10,9 +11,13 @@ const teamSelect = byId("team-select");
 const positionFilters = byId("position-filters");
 const sortSelect = byId("sort-select");
 const resultList = byId("player-results");
+const teamViewSwitch = byId("team-view-switch");
+const viewLinks = document.querySelectorAll(".header-nav [data-team-view]");
+const rosterToolbar = byId("roster-toolbar");
+const transactionsPanel = byId("transactions-panel");
 const downloadMenu = byId("downloads");
 const leagueNames = { AL: "美國聯盟", NL: "國家聯盟" };
-const state = { team: null, league: "NL", position: "all", sort: "jersey", search: "", expanded: new Set() };
+const state = { team: null, league: "NL", view: "roster", position: "all", sort: "jersey", search: "", expanded: new Set() };
 const collator = new Intl.Collator("en", { sensitivity: "base", numeric: true });
 const number = new Intl.NumberFormat("en-US");
 const LIVE_INTERVAL = 120_000;
@@ -28,6 +33,7 @@ let searchDelay;
 let bundledSnapshot;
 let lastAttempt = 0;
 let refreshing = false;
+const transactionView = createTransactionsView(transactionsPanel, id => teamMap.get(id), LIVE_INTERVAL);
 
 function matchesForQuery(query) {
   const words = normalize(query).split(" ").filter(Boolean);
@@ -111,6 +117,8 @@ function renderHeading() {
     return;
   }
   const team = state.team;
+  const showTransactions = state.view === "transactions";
+  const source = showTransactions ? officialTransactionsUrl(team) : team.rosterUrl;
   viewHeading.style.setProperty("--team", team.color);
   viewHeading.innerHTML = `<div class="team-identity">
     <img class="team-crest" src="${logo(team)}" alt="" width="62" height="62">
@@ -120,8 +128,8 @@ function renderHeading() {
     </div>
   </div>
   <div class="team-actions">
-    <div class="roster-count" aria-label="40 人名單已使用 ${team.players.length} 個名額"><strong>${team.players.length}</strong><span>/ 40 人</span></div>
-    <a class="source-link" href="${escape(team.rosterUrl)}" target="_blank" rel="noopener noreferrer">官方名單 ${icon("external")}</a>
+    ${showTransactions ? "" : `<div class="roster-count" aria-label="40 人名單已使用 ${team.players.length} 個名額"><strong>${team.players.length}</strong><span>/ 40 人</span></div>`}
+    <a class="source-link" href="${escape(source)}" target="_blank" rel="noopener noreferrer">${showTransactions ? "官方異動" : "官方名單"} ${icon("external")}</a>
   </div>`;
 }
 
@@ -206,6 +214,32 @@ function renderRosterResults() {
   }).join("");
 }
 
+function renderView() {
+  const currentView = state.search ? "roster" : state.view;
+  const showTransactions = currentView === "transactions";
+  for (const link of viewLinks) {
+    const view = link.dataset.teamView;
+    link.classList.toggle("nav-current", view === currentView);
+    const params = new URLSearchParams({ team: state.team.abbr });
+    if (view === "transactions") params.set("view", view);
+    link.href = `?${params}#roster`;
+  }
+  teamViewSwitch.hidden = Boolean(state.search);
+  for (const button of teamViewSwitch.querySelectorAll("button")) {
+    button.setAttribute("aria-pressed", String(button.dataset.teamView === currentView));
+  }
+  rosterToolbar.hidden = showTransactions;
+  resultList.hidden = showTransactions;
+  transactionsPanel.hidden = !showTransactions;
+  if (showTransactions) {
+    byId("results-status").textContent = "";
+    transactionView.open(state.team);
+  } else {
+    transactionView.close();
+    renderRosterResults();
+  }
+}
+
 function focusResults() {
   const heading = byId("roster-title");
   heading.focus({ preventScroll: true });
@@ -217,6 +251,8 @@ function updateURL() {
   url.searchParams.set("team", state.team.abbr);
   if (state.search) url.searchParams.set("q", state.search);
   else url.searchParams.delete("q");
+  if (state.view === "transactions") url.searchParams.set("view", state.view);
+  else url.searchParams.delete("view");
   history.replaceState(null, "", url);
 }
 
@@ -232,7 +268,7 @@ function selectTeam(team, jump = false, preserveTeamFocus = false) {
   updateURL();
   renderTeamNavigation();
   renderHeading();
-  renderRosterResults();
+  renderView();
   if (jump || byId("roster-title").getBoundingClientRect().top < 0) {
     focusResults();
   } else if (preserveTeamFocus) {
@@ -249,10 +285,34 @@ function applySearch() {
   updateURL();
   renderTeamNavigation();
   renderHeading();
-  renderRosterResults();
+  renderView();
+}
+
+function selectView(view, jump = false) {
+  state.view = view;
+  if (state.search || searchInput.value) {
+    searchInput.value = "";
+    applySearch();
+  } else {
+    updateURL();
+    renderHeading();
+    renderView();
+  }
+  if (jump) focusResults();
 }
 
 function connectEvents() {
+  teamViewSwitch.addEventListener("click", event => {
+    const button = event.target.closest("[data-team-view]");
+    if (button) selectView(button.dataset.teamView);
+  });
+  for (const link of viewLinks) {
+    link.addEventListener("click", event => {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+      event.preventDefault();
+      selectView(link.dataset.teamView, true);
+    });
+  }
   leagueSwitch.addEventListener("click", event => {
     const button = event.target.closest("[data-league]");
     if (!button) return;
@@ -294,6 +354,7 @@ function connectEvents() {
     const button = event.target.closest("button");
     if (!button) return;
     if (button.dataset.openTeam) {
+      state.view = "roster";
       selectTeam(teamMap.get(Number(button.dataset.openTeam)), true);
     } else if (button.dataset.expandTeam) {
       const id = Number(button.dataset.expandTeam);
@@ -369,7 +430,7 @@ async function refreshRoster() {
       state.team = teamMap.get(state.team.id);
       renderTeamNavigation();
       renderHeading();
-      renderRosterResults();
+      renderView();
       if (focusedId) resultList.querySelector(`[data-player="${focusedId}"]`)?.focus({ preventScroll: true });
       if (focusedTeam) divisionList.querySelector(`[data-team="${focusedTeam}"]`)?.focus({ preventScroll: true });
     }
@@ -381,6 +442,11 @@ async function refreshRoster() {
   } finally {
     refreshing = false;
   }
+}
+
+function refreshDirectory() {
+  void refreshRoster();
+  void transactionView.refresh();
 }
 
 function connectDownloads() {
@@ -409,6 +475,7 @@ async function start() {
     const selectedAbbr = params.get("team")?.toUpperCase() ?? "LAD";
     state.team = snapshot.teams.find(team => team.abbr === selectedAbbr) ?? teamMap.get(119);
     state.league = state.team.league;
+    state.view = params.get("view") === "transactions" ? "transactions" : "roster";
     state.search = params.get("q")?.trim() ?? "";
     searchInput.value = state.search;
     clearSearch.hidden = !state.search;
@@ -416,17 +483,16 @@ async function start() {
     setMobileTeams();
     renderTeamNavigation();
     renderHeading();
-    renderRosterResults();
+    renderView();
     connectEvents();
     for (const element of [searchInput, searchForm.querySelector("[type=submit]"), teamSelect, ...leagueSwitch.querySelectorAll("button")]) {
       element.disabled = false;
     }
-    byId("roster-toolbar").hidden = false;
-    void refreshRoster();
-    setInterval(refreshRoster, LIVE_INTERVAL);
-    document.addEventListener("visibilitychange", refreshRoster);
-    window.addEventListener("pageshow", refreshRoster);
-    window.addEventListener("online", refreshRoster);
+    refreshDirectory();
+    setInterval(refreshDirectory, LIVE_INTERVAL);
+    document.addEventListener("visibilitychange", refreshDirectory);
+    window.addEventListener("pageshow", refreshDirectory);
+    window.addEventListener("online", refreshDirectory);
   } catch (error) {
     console.error(error);
     resultList.innerHTML = '<div class="empty-state"><strong>名單暫時無法載入</strong><p>重新整理頁面，或從上方下載完整名單。</p><button type="button" class="retry-button">重新載入</button></div>';
