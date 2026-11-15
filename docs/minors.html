@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101d2e">
+  <meta name="description" content="瀏覽 MLB 各球團的小聯盟名單與 MLB Pipeline 新秀排行。">
+  <title>小聯盟球員與新秀榜｜大聯盟球員圖鑑</title>
+  <link rel="icon" href="assets/baseball.png" type="image/png">
+  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="minors.css">
+  <link rel="preconnect" href="https://statsapi.mlb.com" crossorigin>
+  <script type="module" src="minors.js"></script>
+</head>
+<body class="minors-page">
+  <a class="skip-link" href="#minors">跳到小聯盟資料</a>
+  <header class="site-header">
+    <div class="shell minors-header">
+      <a class="brand" href="./" aria-label="球員圖鑑首頁">
+        <img class="brand-mark" src="assets/baseball.png" alt="" width="36" height="36">
+        <span>球員圖鑑</span>
+      </a>
+      <a class="source-link" id="major-link" href="./#roster">大聯盟名單</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="minors-hero">
+      <div class="shell">
+        <h1>小聯盟球員與新秀榜</h1>
+        <p id="minor-summary">正在載入附屬球隊…</p>
+      </div>
+    </div>
+    <div class="shell minors-directory" id="minors">
+      <div class="team-view-switch minor-view-switch" id="minor-view" role="group" aria-label="小聯盟資料類型">
+        <button type="button" data-view="rosters" aria-pressed="true" disabled>小聯盟名單</button>
+        <button type="button" data-view="team-prospects" aria-pressed="false" disabled>球隊 Top 30</button>
+        <button type="button" data-view="top100" aria-pressed="false" disabled>全聯盟 Top 100</button>
+      </div>
+      <form class="minor-tools" id="minor-tools" role="search">
+        <label id="minor-org-control" for="minor-org">球團<select id="minor-org" disabled></select></label>
+        <label id="minor-level-control" for="minor-level">層級
+          <select id="minor-level" disabled>
+            <option value="all">全部層級</option>
+            <option value="11">3A</option>
+            <option value="12">2A</option>
+            <option value="13">高階 1A</option>
+            <option value="14">1A</option>
+            <option value="16">新人聯盟</option>
+          </select>
+        </label>
+        <label class="minor-search" for="minor-search">搜尋球員
+          <input id="minor-search" type="search" autocomplete="off" placeholder="輸入球員姓名" disabled>
+        </label>
+      </form>
+      <section aria-labelledby="minor-title" id="minor-results" aria-busy="true">
+        <div class="minor-heading">
+          <div class="team-identity">
+            <img class="team-crest minor-crest" id="minor-crest" alt="" width="50" height="50" hidden>
+            <div class="team-label"><h2 id="minor-title">小聯盟名單</h2></div>
+          </div>
+          <a class="source-link" id="minor-source" href="https://www.mlb.com/milb/about/teams/by-affiliate" target="_blank" rel="noopener noreferrer">官方附屬球隊</a>
+        </div>
+        <p class="minor-status" id="minor-status" role="status"></p>
+        <div id="minor-content"><p class="loading-message">正在載入小聯盟資料…</p></div>
+      </section>
+      <noscript><p>啟用 JavaScript 即可瀏覽小聯盟名單與新秀榜。</p></noscript>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell footer-inner">
+      <div>
+        <h2>資料來源</h2>
+        <p>附屬隊與名單取自 <a href="https://www.mlb.com/milb/about/teams/by-affiliate" target="_blank" rel="noopener noreferrer">MLB 官方資料</a>。瀏覽小聯盟名單時，頁面在前景每 2 分鐘查詢所選球團。</p>
+        <p>新秀排名、層級與預計登上大聯盟年份依 <a href="https://www.mlb.com/prospects" target="_blank" rel="noopener noreferrer">MLB Pipeline</a> 的榜單。</p>
+      </div>
+      <a class="top-link" href="#">回到頂端 <span class="icon icon-up" aria-hidden="true"></span></a>
+    </div>
+  </footer>
+</body>
+</html>

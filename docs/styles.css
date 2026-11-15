@@ -117,6 +117,7 @@ button { color: inherit; }
   white-space: nowrap;
 }
 .header-nav a:hover, .header-nav .nav-current { color: var(--ink); }
+.source-link.mobile-minors-link { display: none; }
 .header-nav .nav-current::after {
   position: absolute;
   inset: auto 0 0;
@@ -896,6 +897,12 @@ summary::-webkit-details-marker { display: none; }
   .player-caption { min-height: 56px; padding: 7px 8px; }
   .player-caption strong { font-size: 13px; }
   .site-footer .photo-credit { font-size: 10px; }
+}
+
+@media (max-width: 620px) {
+  .header-inner { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .header-nav { display: none; }
+  .source-link.mobile-minors-link { display: inline-flex; }
 }
 
 @media (prefers-reduced-motion: reduce) {

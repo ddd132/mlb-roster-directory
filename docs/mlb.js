@@ -2,11 +2,12 @@ const API_ROOT = "https://statsapi.mlb.com/api/v1";
 const MLB_ORIGIN = "https://www.mlb.com";
 const PHOTO_ROOT = "https://img.mlbstatic.com/mlb-photos/image/upload";
 const ROSTER_FIELDS = "teamId,rosterType,roster,person,id,fullName,position,code,name,abbreviation,status,description,jerseyNumber,parentTeamId";
+const MINOR_ROSTER_FIELDS = "teamId,rosterType,roster,person,id,fullName,position,abbreviation,status,description";
 const TRANSACTION_FIELDS = "transactions,id,person,fullName,fromTeam,toTeam,name,date,typeCode,typeDesc,description";
 const LIVE_CACHE_KEY = "mlb-40-man-latest-v2";
 const MINOR_LEVELS = [11, 12, 13, 14, 15, 16];
 const dateFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" });
-const transactionDateFormatter = new Intl.DateTimeFormat("en-CA", {
+const mlbDateFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit",
 });
 const clockFormatter = new Intl.DateTimeFormat("en-GB", {
@@ -228,11 +229,38 @@ async function fetchPerson(id) {
   return person;
 }
 
+function mlbCalendarDate(now = new Date()) {
+  const { year, month, day } = formattedParts(mlbDateFormatter, now);
+  return `${year}-${month}-${day}`;
+}
+
+async function fetchMinorRoster(teamId, date = mlbCalendarDate()) {
+  const url = apiUrl(`/teams/${teamId}/roster`, { rosterType: "fullRoster", date, fields: MINOR_ROSTER_FIELDS });
+  const payload = await requestJson(url, { cache: "no-cache" });
+  if (payload.teamId !== teamId || payload.rosterType !== "fullRoster" || !Array.isArray(payload.roster)) {
+    throw new Error(`MLB did not return the MiLB roster for team ${teamId}`);
+  }
+  const players = new Map();
+  for (const row of payload.roster) {
+    const person = row.person;
+    if (!Number.isSafeInteger(person?.id) || person.id <= 0 || !person.fullName) {
+      throw new Error(`Invalid player on MiLB team ${teamId}`);
+    }
+    if (!players.has(person.id)) {
+      players.set(person.id, {
+        id: person.id, name: person.fullName, position: row.position?.abbreviation ?? null,
+        status: row.status?.description ?? null,
+      });
+    }
+  }
+  return [...players.values()];
+}
+
 function transactionDateRange(days, now = new Date()) {
-  const { year, month, day } = formattedParts(transactionDateFormatter, now);
-  const end = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  const endDate = mlbCalendarDate(now);
+  const end = new Date(`${endDate}T00:00:00Z`);
   const start = new Date(end.getTime() - (days - 1) * 86_400_000);
-  return { startDate: start.toISOString().slice(0, 10), endDate: end.toISOString().slice(0, 10) };
+  return { startDate: start.toISOString().slice(0, 10), endDate };
 }
 
 async function fetchTransactions(teamId, days, now = new Date()) {
@@ -299,4 +327,4 @@ function installPhotoFallback() {
   }, true);
 }
 
-export { countryName, escape, fetchLiveRoster, fetchPerson, fetchSeasonStats, fetchSnapshot, fetchTransactions, fetchTransactions as fetchTeamTransactions, handedness, installPhotoFallback, normalizePerson, readLastRoster, rememberRoster, rosterCsv, taipeiTime, teamLogo, transactionDateRange };
+export { countryName, escape, fetchLiveRoster, fetchMinorRoster, fetchPerson, fetchSeasonStats, fetchSnapshot, fetchTransactions, fetchTransactions as fetchTeamTransactions, handedness, installPhotoFallback, mlbCalendarDate, normalizePerson, readLastRoster, rememberRoster, rosterCsv, taipeiTime, teamLogo, transactionDateRange };

@@ -9,8 +9,8 @@
   <link rel="icon" href="assets/baseball.png" type="image/png">
   <link rel="preload" href="assets/inter.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preconnect" href="https://img.mlbstatic.com" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=3">
-  <script type="module" src="app.js?v=3"></script>
+  <link rel="stylesheet" href="styles.css?v=4">
+  <script type="module" src="app.js?v=4"></script>
 </head>
 <body id="top">
   <a class="skip-link" href="#roster">跳到球員名單</a>
@@ -22,10 +22,12 @@
       </a>
       <nav aria-label="主要導覽" class="header-nav">
         <a class="nav-current" href="#roster" data-team-view="roster">球隊名單</a>
+        <a href="minors.html" data-minors-link>小聯盟</a>
         <a href="?view=transactions#roster" data-team-view="transactions">球隊異動</a>
         <a href="?view=league-transactions#roster" data-team-view="league-transactions">全聯盟異動</a>
         <a href="#sources" class="source-nav">資料來源</a>
       </nav>
+      <a class="source-link mobile-minors-link" href="minors.html" data-minors-link>小聯盟</a>
       <details class="downloads" id="downloads">
         <summary><span class="icon icon-download" aria-hidden="true"></span>下載資料</summary>
         <div class="download-menu">

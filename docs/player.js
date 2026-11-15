@@ -8,6 +8,7 @@ const statSections = byId("stat-sections");
 const statsMode = byId("stats-mode");
 const splitCheck = byId("split-check");
 const params = new URLSearchParams(location.search);
+const fromMinors = params.get("from") === "minors";
 const playerId = Number(params.get("id"));
 const validId = /^\d{1,10}$/.test(params.get("id") ?? "") && playerId > 0;
 const labels = { regular: "MLB 例行賽", postseason: "MLB 季後賽", minors: "小聯盟" };
@@ -99,7 +100,7 @@ function showIdentity(player, team, bioClub) {
 
   const backLink = byId("back-to-roster");
   const backTeam = team?.abbr ?? params.get("team");
-  backLink.href = backTeam ? `./?team=${encodeURIComponent(backTeam)}#roster` : "./#roster";
+  if (!fromMinors) backLink.href = backTeam ? `./?team=${encodeURIComponent(backTeam)}#roster` : "./#roster";
 
   const place = [player.birthCity, player.birthRegion, countryName(player.birthCountry)].filter(Boolean).join(" · ");
   const bio = [
@@ -332,12 +333,24 @@ function connectEvents() {
 function noPlayer() {
   byId("player-name").textContent = "找不到這位球員";
   scopeButtons.hidden = true;
-  statSections.innerHTML = '<div class="empty-state"><strong>球員連結無法讀取</strong><p>可以回到球隊名單重新選擇球員。</p><a class="source-link" href="./#roster">回球隊名單</a></div>';
+  const back = byId("back-to-roster");
+  statSections.innerHTML = `<div class="empty-state"><strong>球員連結無法讀取</strong><p>可以回到名單重新選擇球員。</p><a class="source-link" href="${escape(back.getAttribute("href"))}">${escape(back.textContent)}</a></div>`;
   statSections.setAttribute("aria-busy", "false");
 }
 
 async function start() {
   installPhotoFallback();
+  if (fromMinors) {
+    const backParams = new URLSearchParams();
+    if (params.has("team")) backParams.set("team", params.get("team"));
+    if (params.has("minorView")) backParams.set("view", params.get("minorView"));
+    for (const key of ["level", "q"]) {
+      if (params.has(key)) backParams.set(key, params.get(key));
+    }
+    const back = byId("back-to-roster");
+    back.href = `minors.html${backParams.size ? `?${backParams}` : ""}#minors`;
+    back.textContent = "回小聯盟";
+  }
   if (!validId) {
     noPlayer();
     return;

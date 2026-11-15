@@ -13,6 +13,7 @@ const sortSelect = byId("sort-select");
 const resultList = byId("player-results");
 const teamViewSwitch = byId("team-view-switch");
 const viewLinks = document.querySelectorAll(".header-nav [data-team-view]");
+const minorsLinks = document.querySelectorAll("[data-minors-link]");
 const rosterToolbar = byId("roster-toolbar");
 const transactionsPanel = byId("transactions-panel");
 const downloadMenu = byId("downloads");
@@ -235,6 +236,7 @@ function renderView() {
     if (transactionViews.has(view)) params.set("view", view);
     link.href = `?${params}#roster`;
   }
+  for (const link of minorsLinks) link.href = `minors.html?team=${encodeURIComponent(state.team.abbr)}`;
   teamViewSwitch.hidden = Boolean(state.search);
   for (const button of teamViewSwitch.querySelectorAll("button")) {
     button.setAttribute("aria-pressed", String(button.dataset.teamView === currentView));
