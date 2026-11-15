@@ -265,7 +265,11 @@ function renderStats() {
     const coverage = advancedData.firstSeason
       ? `<a href="https://baseballsavant.mlb.com/leaderboard/custom" target="_blank" rel="noopener noreferrer">Baseball Savant</a> ${advancedData.firstSeason}–${advancedData.lastSeason} 年整季數據，部分年份由 MLB 官方補充。`
       : "目前顯示 MLB 官方可讀取的進階數據。";
-    sourceNote = `<p class="stats-notice">${coverage} — 代表資料缺值。OPS+ 和 ERA+ 來源待補。</p>`;
+    const fangraphs = `<a href="https://www.fangraphs.com/leaders/major-league" target="_blank" rel="noopener noreferrer">FanGraphs</a>`;
+    const indexSource = advancedData.fangraphsAvailable
+      ? `wRC+ 與 ERA- 取自 ${fangraphs}。`
+      : `${fangraphs} 的 wRC+ 與 ERA- 暫時無法載入。`;
+    sourceNote = `<p class="stats-notice">${indexSource} ${coverage} — 代表資料缺值。</p>`;
   }
   statSections.innerHTML = `<div class="stats-caption">${links}<p class="stats-notice">${intro}</p></div>`
     + keys.map(group => renderTable(groups.get(group), group, isMinor, advanced)).join("") + sourceNote;

@@ -10,7 +10,7 @@ const advancedDefinitions = {
   hitting: {
     label: "打擊進階",
     columns: [
-      ["OPS+", "opsPlus", "經聯盟與球場校正的 OPS 指數", true],
+      ["wRC+", "fangraphsValue", "FanGraphs 加權得分創造指數。聯盟平均為 100，越高越好", true],
       ...commonColumns,
       ["Hard-Hit%", "hardHitRate", "擊球初速達 95 mph 的比例"],
       ["Barrel%", "barrelRate", "Barrel 占擊球事件的比例"],
@@ -20,7 +20,7 @@ const advancedDefinitions = {
   pitching: {
     label: "投球進階",
     columns: [
-      ["ERA+", "eraPlus", "經聯盟與球場校正的防禦率指數", true],
+      ["ERA-", "fangraphsValue", "FanGraphs 經聯盟與球場校正的防禦率指數。聯盟平均為 100，越低越好", true],
       ["被 OPS", "ops", "對手的上壘率加長打率", true],
       ...commonColumns,
       ["被 Hard-Hit%", "hardHitRate", "對手擊球初速達 95 mph 的比例"],
@@ -30,12 +30,19 @@ const advancedDefinitions = {
   },
 };
 
-async function savantSnapshot() {
-  const response = await fetch("data/savant-seasons.json", { signal: AbortSignal.timeout(16_000) });
-  if (!response.ok) throw new Error(`Savant snapshot returned HTTP ${response.status}`);
-  const payload = await response.json();
-  if (!Array.isArray(payload.columns) || !payload.players) throw new Error("Invalid Savant snapshot");
-  return payload;
+async function loadSnapshot(name) {
+  try {
+    const response = await fetch(`data/${name}-seasons.json`, { signal: AbortSignal.timeout(16_000) });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    if (!payload.players || (name === "savant" && !Array.isArray(payload.columns))) {
+      throw new Error("Invalid season data");
+    }
+    return payload;
+  } catch (error) {
+    console.warn(`Could not load ${name} season data`, error);
+    return null;
+  }
 }
 
 function groupLegacyStats(rows) {
@@ -49,11 +56,8 @@ function groupLegacyStats(rows) {
 }
 
 async function loadAdvanced(id, regularRows) {
-  const snapshot = await savantSnapshot().catch(error => {
-    console.warn("Could not retrieve the Savant snapshot", error);
-    return null;
-  });
-  const player = snapshot?.players[id] ?? {};
+  const [savant, fangraphs] = await Promise.all([loadSnapshot("savant"), loadSnapshot("fangraphs")]);
+  const player = savant?.players[id] ?? {};
   const needsLegacy = regularRows.some(row => !player[row.group]?.[row.season]);
   const legacy = needsLegacy
     ? await fetchSeasonStats(id, "regular", "yearByYearAdvanced").catch(error => {
@@ -63,9 +67,11 @@ async function loadAdvanced(id, regularRows) {
     : [];
   return {
     player,
-    columns: snapshot?.columns ?? [],
-    firstSeason: snapshot?.firstSeason,
-    lastSeason: snapshot?.lastSeason,
+    columns: savant?.columns ?? [],
+    firstSeason: savant?.firstSeason,
+    lastSeason: savant?.lastSeason,
+    fangraphsPlayer: fangraphs?.players[id] ?? {},
+    fangraphsAvailable: fangraphs !== null,
     legacy: groupLegacyStats(legacy),
   };
 }
@@ -93,6 +99,7 @@ function seasonMetrics(data, group, season, stat) {
   const ballsInPlay = stat.atBats - stat.strikeOuts - stat.homeRuns + stat.sacFlies;
   const babip = ballsInPlay > 0 ? (stat.hits - stat.homeRuns) / ballsInPlay : null;
   return {
+    fangraphsValue: data.fangraphsPlayer[group]?.[season] ?? null,
     babip: fixed(savant.babip ?? official.babip ?? stat.babip ?? babip, 3),
     kRate: percent(savant.kRate ?? ratio(stat.strikeOuts, plateAppearances)),
     bbRate: percent(savant.bbRate ?? ratio(stat.baseOnBalls, plateAppearances)),
