@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101d2e">
+  <meta name="description" content="依球季與聯盟查看 MLB 官方打擊、投球的單項排行榜。">
+  <title>MLB 單項排行榜｜球員圖鑑</title>
+  <link rel="icon" href="assets/baseball.png" type="image/png">
+  <link rel="preconnect" href="https://statsapi.mlb.com" crossorigin>
+  <link rel="stylesheet" href="styles.css?v=4">
+  <script type="module" src="leaders.js?v=1"></script>
+  <style>
+    .leader-nav { min-height: 65px; display: flex; justify-content: space-between; align-items: center; }
+    .leader-nav .source-link { white-space: nowrap; }
+    .leader-banner {
+      padding: 34px 0 38px;
+      color: #fff;
+      background: radial-gradient(ellipse at 85% 115%, #255e88, transparent 68%), var(--navy);
+    }
+    .leader-banner h1 { margin: 0 0 7px; font-size: clamp(30px, 4.5vw, 53px); letter-spacing: -.035em; }
+    .leader-banner p { margin: 0; color: #d5e3f1; font-size: 14px; }
+    .leader-layout { padding-block: 24px 42px; }
+    .leader-filters { background: #fff; border: 1px solid var(--line); padding: 14px 16px 16px; border-radius: 10px; }
+    .leader-filter-top { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+    .leader-filter-top .position-filters { flex-wrap: nowrap; }
+    .leader-filter-top .position-filters button { min-width: 64px; }
+    .leader-selects { display: grid; grid-template-columns: 2fr repeat(5, minmax(105px, 1fr)); gap: 10px; }
+    .leader-selects label, .leader-search { display: grid; gap: 5px; min-width: 0; font-size: 12px; font-weight: 700; color: var(--muted); }
+    .leader-selects select, .leader-search input {
+      width: 100%; min-width: 0; min-height: 42px; padding: 7px 9px;
+      border: 1px solid #d6dfe8; border-radius: 7px; background: white; color: var(--ink); font-size: 14px;
+    }
+    .leader-summary { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: flex-end; justify-content: space-between; }
+    .leader-summary h2 { margin: 0 0 4px; font-size: clamp(22px, 3.1vw, 32px); letter-spacing: -.03em; }
+    .leader-search { width: min(100%, 260px); }
+    .leader-status { min-height: 18px; color: var(--muted); font-size: 13px; line-height: 1.5; margin: 4px 0 0; }
+    .leader-results { margin-top: 11px; }
+    .leader-table-wrap { background: white; border: 1px solid #dae1e8; border-radius: 10px; overflow: hidden; }
+    .leader-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+    .leader-table thead th { background: #15263a; color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .leader-table th, .leader-table td { text-align: left; padding: 11px 13px; }
+    .leader-table tbody tr + tr { border-top: 1px solid #e8edf2; }
+    .leader-table tbody tr:nth-child(even) { background: #f8fafc; }
+    .leader-table tbody tr:hover { background: #eff5fb; }
+    .leader-table .leader-number { text-align: right; white-space: nowrap; }
+    .leader-table .leader-rank { width: 1%; white-space: nowrap; }
+    .leader-rank strong { display: inline-grid; place-items: center; min-width: 27px; min-height: 27px; border-radius: 6px; background: #e9edf2; color: #26364c; }
+    .leader-rank .leader-top-rank { background: #15314c; color: white; }
+    .leader-player a { font-weight: 760; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    .leader-player a:hover { color: #1d5f95; }
+    .leader-player small { display: block; color: var(--muted); font-size: 11px; }
+    .leader-abbr { font-size: 12px; font-weight: 740; }
+    .leader-mobile-club { display: none; }
+    .leader-value { color: #124b7d; font-weight: 820; }
+    .leader-pages { margin-block: 13px 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 9px; align-items: center; }
+    .leader-pages p, .leader-footnote { color: var(--muted); font-size: 13px; margin: 0; line-height: 1.65; }
+    .leader-page-buttons { display: flex; gap: 8px; }
+    .leader-page-buttons button:disabled { opacity: .42; cursor: default; }
+    .leader-footnote { margin-top: 13px; }
+    .leader-footnote a { text-underline-offset: 3px; }
+    #leader-heading { scroll-margin-top: 12px; }
+    @media (max-width: 910px) {
+      .leader-selects { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 555px) {
+      .leader-nav { min-height: 57px; }
+      .leader-banner { padding-block: 23px 25px; }
+      .leader-layout { padding-block: 15px 29px; }
+      .leader-filters { padding: 10px; }
+      .leader-filter-top { margin-bottom: 9px; }
+      .leader-selects { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+      .leader-selects select, .leader-search input { font-size: 16px; }
+      .leader-summary { margin-top: 17px; }
+      .leader-search { width: 100%; }
+      .leader-table { font-size: 13px; }
+      .leader-table th, .leader-table td { padding: 9px 7px; }
+      .leader-table .leader-club { display: none; }
+      .leader-mobile-club { display: inline; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#leader-heading">跳到排行榜</a>
+  <header class="site-header">
+    <div class="shell leader-nav">
+      <a class="brand" href="./" aria-label="球員圖鑑首頁"><img class="brand-mark" src="assets/baseball.png" alt="" width="36" height="36"><span>球員圖鑑</span></a>
+      <a class="source-link" href="./#roster">球隊名單</a>
+    </div>
+  </header>
+  <main>
+    <header class="leader-banner">
+      <div class="shell"><h1>MLB 單項排行榜</h1><p>打擊、投球的標準與擴充數據。</p></div>
+    </header>
+    <div class="shell leader-layout">
+      <div class="leader-filters" aria-label="排行榜篩選">
+        <div class="leader-filter-top">
+          <div class="position-filters" id="leader-group" role="group" aria-label="排行榜類型">
+            <button type="button" data-group="hitting" aria-pressed="true">打擊</button>
+            <button type="button" data-group="pitching" aria-pressed="false">投球</button>
+          </div>
+          <a class="source-link" id="leader-source" href="https://www.mlb.com/stats/" target="_blank" rel="noopener noreferrer">MLB 官網 <span class="icon icon-external" aria-hidden="true"></span></a>
+        </div>
+        <div class="leader-selects">
+          <label for="leader-metric">排行項目<select id="leader-metric"></select></label>
+          <label for="leader-season">球季<select id="leader-season"></select></label>
+          <label for="leader-game">賽別<select id="leader-game"><option value="R">例行賽</option><option value="P">季後賽</option></select></label>
+          <label for="leader-league">聯盟<select id="leader-league"><option value="MLB">MLB</option><option value="AL">美國聯盟</option><option value="NL">國家聯盟</option></select></label>
+          <label for="leader-pool">球員範圍<select id="leader-pool"><option value="auto">依項目自動</option><option value="all">全部球員</option><option value="qualified">達官方門檻</option></select></label>
+          <label for="leader-sort">排序<select id="leader-sort"><option value="desc">數值由高到低</option><option value="asc">數值由低到高</option></select></label>
+        </div>
+      </div>
+      <section aria-labelledby="leader-heading">
+        <div class="leader-summary">
+          <div><h2 id="leader-heading" tabindex="-1">球員排行</h2><p id="leader-status" class="leader-status" role="status"></p></div>
+          <label for="leader-search" class="leader-search">搜尋球員<input type="search" id="leader-search" placeholder="輸入球員英文姓名" autocomplete="off"></label>
+        </div>
+        <div id="leader-results" class="leader-results" aria-busy="true"><p class="loading-message">正在讀取 MLB 官方成績…</p></div>
+        <nav id="leader-pages" class="leader-pages" aria-label="排行榜分頁" hidden>
+          <p id="leader-page-status"></p><div class="leader-page-buttons">
+            <button type="button" class="source-link" id="leader-prev">上一頁</button>
+            <button type="button" class="source-link" id="leader-next">下一頁</button>
+          </div>
+        </nav>
+        <p class="leader-footnote">比率榜預設採 MLB 官方合格球員，累計榜預設列出全部球員。可用「球員範圍」切換，數值相同並列。較早球季的部分項目可能缺少紀錄。<a href="https://www.mlb.com/glossary/standard-stats/rate-stats-qualifiers" target="_blank" rel="noopener noreferrer">官方門檻說明</a></p>
+      </section>
+      <noscript><p>啟用 JavaScript 即可查閱排行榜。</p></noscript>
+    </div>
+  </main>
+</body>
+</html>
