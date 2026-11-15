@@ -1,7 +1,7 @@
 import { countryName, escape, fetchPerson, fetchSeasonStats, fetchSnapshot, handedness, installPhotoFallback, normalizePerson, readLastRoster, teamLogo } from "./mlb.js";
 
 import { advancedDefinitions, loadAdvanced, seasonMetrics } from "./advanced.js";
-import { renderPercentiles } from "./percentiles.js?v=1";
+import { renderPercentiles } from "./percentiles.js?v=2";
 
 const byId = id => document.getElementById(id);
 const scopeButtons = byId("scope-switch");
