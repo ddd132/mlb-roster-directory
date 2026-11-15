@@ -1,4 +1,4 @@
-import { escape, fetchTeamTransactions, taipeiTime } from "./mlb.js?v=2";
+import { escape, fetchTransactions, taipeiTime, teamLogo, transactionDateRange } from "./mlb.js?v=3";
 
 const typeLabels = {
   CU: ["roster", "升上大聯盟"],
@@ -24,6 +24,8 @@ const typeLabels = {
 };
 
 const PAGE_SIZE = 20;
+const RECENT_LEAGUE_DAYS = 30;
+const HISTORY_REFRESH_INTERVAL = 86_400_000;
 
 function transactionType(row) {
   const description = row.description ?? "";
@@ -58,14 +60,34 @@ function groupTransactions(rows) {
 }
 
 function officialTransactionsUrl(team) {
-  return new URL("transactions", team.rosterUrl).href;
+  return team ? new URL("transactions", team.rosterUrl).href : "https://www.mlb.com/roster/transactions";
 }
 
 function playerLink(person, team, eventId) {
   if (!person?.fullName) return "";
   const name = escape(person.fullName);
   if (!Number.isSafeInteger(person.id) || person.id <= 0) return name;
-  return `<a href="player.html?id=${person.id}&amp;team=${escape(team.abbr)}" data-transaction-player="${eventId}-${person.id}">${name}</a>`;
+  const teamParam = team ? `&amp;team=${escape(team.abbr)}` : "";
+  return `<a href="player.html?id=${person.id}${teamParam}" data-transaction-player="${eventId}-${person.id}">${name}</a>`;
+}
+
+function clubLink(club, getTeam) {
+  const team = getTeam(club.id);
+  if (!team) return escape(club.name);
+  return `<a class="transaction-club" href="?team=${escape(team.abbr)}&amp;view=transactions#roster">
+    <img src="${teamLogo(team)}" alt="" width="17" height="17" loading="lazy">${escape(team.nameZh)}
+  </a>`;
+}
+
+function tradeMarkup(title, groups, description, leagueTrade = false) {
+  const rows = groups.filter(([, players]) => players.size)
+    .map(([label, players]) => `<div><dt>${escape(label)}</dt><dd>${[...players.values()].join("、")}</dd></div>`).join("");
+  const extras = [];
+  if (/\bcash considerations?\b/i.test(description)) extras.push("現金");
+  if (/\bplayers? to be named later\b/i.test(description)) extras.push("日後指定球員");
+  if (/\bother considerations?\b/i.test(description)) extras.push("其他交易條件");
+  return `<h3>${title}</h3>${rows ? `<dl class="transaction-trade${leagueTrade ? " transaction-trade-league" : ""}">${rows}</dl>` : ""}
+    ${extras.length ? `<p>另含${extras.join("、")}</p>` : ""}`;
 }
 
 function tradeDetails(event, team, teamName) {
@@ -83,20 +105,35 @@ function tradeDetails(event, team, teamName) {
     players.set(person.id ?? person.fullName, link);
   }
   const title = partners.size ? [...partners.values()].join("、") : "球員交易";
-  const rows = [["獲得", arrivals], ["送出", departures], ["涉及球員", unassigned]]
-    .filter(([, players]) => players.size)
-    .map(([label, players]) => `<div><dt>${label}</dt><dd>${[...players.values()].join("、")}</dd></div>`).join("");
-  const terms = event.rows[0].description ?? "";
-  const extras = [];
-  if (/\bcash considerations?\b/i.test(terms)) extras.push("現金");
-  if (/\bplayers? to be named later\b/i.test(terms)) extras.push("日後指定球員");
-  if (/\bother considerations?\b/i.test(terms)) extras.push("其他交易條件");
-  return `<h3>${escape(title)}</h3>${rows ? `<dl class="transaction-trade">${rows}</dl>` : ""}
-    ${extras.length ? `<p>另含${extras.join("、")}</p>` : ""}`;
+  return tradeMarkup(escape(title), [["獲得", arrivals], ["送出", departures], ["涉及球員", unassigned]], event.rows[0].description);
+}
+
+function leagueTradeDetails(event, getTeam, teamName) {
+  const clubs = new Map();
+  const directions = new Map();
+  for (const { fromTeam, toTeam, person } of event.rows) {
+    for (const club of [fromTeam, toTeam]) {
+      if (club) clubs.set(club.id, club);
+    }
+    const playerTeam = getTeam(toTeam?.id) ?? getTeam(fromTeam?.id);
+    const link = playerLink(person, playerTeam, event.id);
+    if (!link) continue;
+    const key = `${fromTeam?.id ?? ""}/${toTeam?.id ?? ""}`;
+    if (!directions.has(key)) directions.set(key, { fromTeam, toTeam, players: new Map() });
+    directions.get(key).players.set(person.id ?? person.fullName, link);
+  }
+  const title = [...clubs.values()].map(club => clubLink(club, getTeam)).join(" · ") || "球員交易";
+  const groups = [...directions.values()].map(({ fromTeam, toTeam, players }) => {
+    let label = "涉及球員";
+    if (fromTeam && toTeam) label = `${teamName(fromTeam)} → ${teamName(toTeam)}`;
+    else if (toTeam) label = `${teamName(toTeam)}獲得`;
+    else if (fromTeam) label = `${teamName(fromTeam)}送出`;
+    return [label, players];
+  });
+  return tradeMarkup(title, groups, event.rows[0].description, true);
 }
 
 function transactionDetails(event, team, teamName) {
-  if (event.category === "trade") return tradeDetails(event, team, teamName);
   const row = event.rows[0];
   const player = playerLink(row.person, team, event.id);
   const description = row.description ?? "";
@@ -114,15 +151,22 @@ function transactionDetails(event, team, teamName) {
   return `${player ? `<h3>${player}</h3>` : ""}${detail ? `<p>${escape(detail)}</p>` : ""}`;
 }
 
-function transactionMarkup(event, team, teamName) {
+function transactionMarkup(event, team, getTeam, teamName) {
   const month = event.date.slice(0, 7).replace("-", "/");
+  const trade = event.category === "trade";
+  const row = event.rows[0];
+  const playerTeam = team ?? getTeam(row.toTeam?.id) ?? getTeam(row.fromTeam?.id);
+  const club = !team && !trade && playerTeam ? clubLink(playerTeam, getTeam) : "";
+  const details = trade
+    ? (team ? tradeDetails(event, team, teamName) : leagueTradeDetails(event, getTeam, teamName))
+    : transactionDetails(event, playerTeam, teamName);
   return `<li class="transaction-item">
     <a class="transaction-date" href="${escape(`${officialTransactionsUrl(team)}/${month}`)}" target="_blank" rel="noopener noreferrer" title="查看該月 MLB 官方異動">
       <time datetime="${event.date}">${event.date.replaceAll("-", "/")}</time>
     </a>
     <div class="transaction-copy">
-      <span class="transaction-label" data-category="${event.category}">${escape(event.label)}</span>
-      ${transactionDetails(event, team, teamName)}
+      <div class="transaction-meta"><span class="transaction-label" data-category="${event.category}">${escape(event.label)}</span>${club}</div>
+      ${details}
     </div>
   </li>`;
 }
@@ -136,17 +180,18 @@ function createTransactionsView(panel, getTeam, refreshInterval) {
   const more = panel.querySelector("#transaction-more");
   const cache = new Map();
   const pending = new Set();
+  // An undefined team closes the panel. A null selection includes all MLB teams.
   let team;
   let category = "all";
   let limit = PAGE_SIZE;
-  const currentKey = () => `${team.id}/${period.value}`;
+  const currentKey = () => `${team?.id ?? "league"}/${period.value}`;
   const teamName = club => getTeam(club.id)?.nameZh ?? club.name ?? "球隊未列出";
 
   function render() {
     const key = currentKey();
     const result = cache.get(key);
     const loading = pending.has(key);
-    const entries = result?.entries?.filter(event => category === "all" || event.category === category);
+    const entries = category === "all" ? result?.entries : result?.entries?.filter(event => event.category === category);
     more.hidden = !entries || entries.length <= limit;
     retry.hidden = !result?.failed || loading;
     results.setAttribute("aria-busy", String(loading && !entries));
@@ -162,34 +207,46 @@ function createTransactionsView(panel, getTeam, refreshInterval) {
       : `${entries.length} 筆 · ${clock.clock} 已查詢 MLB`;
     const focused = document.activeElement?.dataset.transactionPlayer;
     results.innerHTML = entries.length
-      ? `<ol class="transaction-list">${entries.slice(0, limit).map(event => transactionMarkup(event, team, teamName)).join("")}</ol>`
+      ? `<ol class="transaction-list">${entries.slice(0, limit).map(event => transactionMarkup(event, team, getTeam, teamName)).join("")}</ol>`
       : '<div class="empty-state"><strong>這段期間沒有符合條件的異動</strong><p>可以調整日期範圍或異動類型。</p></div>';
     if (!more.hidden) more.textContent = `再顯示 ${Math.min(PAGE_SIZE, entries.length - limit)} 筆`;
     if (focused) results.querySelector(`[data-transaction-player="${focused}"]`)?.focus({ preventScroll: true });
   }
 
   async function refresh(force = false) {
-    if (!team || document.visibilityState === "hidden") return;
+    if (team === undefined || document.visibilityState === "hidden") return;
     const key = currentKey();
     const previous = cache.get(key);
     const startedAt = Date.now();
     if (pending.has(key) || (!force && previous && startedAt - previous.startedAt < refreshInterval)) return;
+    const league = team === null;
+    const days = Number(period.value);
+    const now = new Date(startedAt);
+    const recentOnly = league && days > RECENT_LEAGUE_DAYS && !force
+      && startedAt - previous?.fullAt < HISTORY_REFRESH_INTERVAL;
     pending.add(key);
     if (!previous?.entries || previous.failed) render();
     try {
-      const rows = await fetchTeamTransactions(team.id, Number(period.value));
-      cache.set(key, { entries: groupTransactions(rows), checkedAt: Date.now(), startedAt });
+      const rows = await fetchTransactions(team?.id, recentOnly ? RECENT_LEAGUE_DAYS : days, now);
+      let entries = groupTransactions(rows);
+      if (league) entries = entries.filter(event => event.rows.some(row => getTeam(row.fromTeam?.id) || getTeam(row.toTeam?.id)));
+      if (recentOnly) {
+        const { startDate } = transactionDateRange(days, now);
+        const recentStart = transactionDateRange(RECENT_LEAGUE_DAYS, now).startDate;
+        entries.push(...previous.entries.filter(event => event.date >= startDate && event.date < recentStart));
+      }
+      cache.set(key, { entries, checkedAt: Date.now(), startedAt, fullAt: recentOnly ? previous.fullAt : startedAt });
     } catch (error) {
       console.warn("Could not refresh MLB team transactions", error);
       cache.set(key, { ...previous, startedAt, failed: true });
     } finally {
       pending.delete(key);
-      if (team && currentKey() === key) render();
+      if (team !== undefined && currentKey() === key) render();
     }
   }
 
   function open(selected) {
-    if (team?.id === selected.id) return;
+    if (team === selected || (team && selected && team.id === selected.id)) return;
     team = selected;
     limit = PAGE_SIZE;
     render();
@@ -198,7 +255,7 @@ function createTransactionsView(panel, getTeam, refreshInterval) {
 
   filters.addEventListener("click", event => {
     const button = event.target.closest("[data-transaction-filter]");
-    if (!button || !team) return;
+    if (!button || team === undefined) return;
     category = button.dataset.transactionFilter;
     limit = PAGE_SIZE;
     for (const option of filters.querySelectorAll("button")) {
@@ -207,7 +264,7 @@ function createTransactionsView(panel, getTeam, refreshInterval) {
     render();
   });
   period.addEventListener("change", () => {
-    if (!team) return;
+    if (team === undefined) return;
     limit = PAGE_SIZE;
     render();
     void refresh();
@@ -220,7 +277,7 @@ function createTransactionsView(panel, getTeam, refreshInterval) {
     if (more.hidden) results.querySelectorAll(".transaction-item")[firstNewIndex]?.querySelector("a")?.focus();
   });
 
-  return { open, close: () => { team = null; }, refresh };
+  return { open, close: () => { team = undefined; }, refresh };
 }
 
 export { createTransactionsView, officialTransactionsUrl };

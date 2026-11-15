@@ -1,5 +1,5 @@
-import { countryName, escape, fetchLiveRoster, fetchSnapshot, installPhotoFallback, readLastRoster, rememberRoster, rosterCsv, taipeiTime, teamLogo as logo } from "./mlb.js?v=2";
-import { createTransactionsView, officialTransactionsUrl } from "./transactions.js";
+import { countryName, escape, fetchLiveRoster, fetchSnapshot, installPhotoFallback, readLastRoster, rememberRoster, rosterCsv, taipeiTime, teamLogo as logo } from "./mlb.js?v=3";
+import { createTransactionsView, officialTransactionsUrl } from "./transactions.js?v=3";
 
 const byId = id => document.getElementById(id);
 const searchForm = byId("player-search");
@@ -17,6 +17,7 @@ const rosterToolbar = byId("roster-toolbar");
 const transactionsPanel = byId("transactions-panel");
 const downloadMenu = byId("downloads");
 const leagueNames = { AL: "美國聯盟", NL: "國家聯盟" };
+const transactionViews = new Set(["transactions", "league-transactions"]);
 const state = { team: null, league: "NL", view: "roster", position: "all", sort: "jersey", search: "", expanded: new Set() };
 const collator = new Intl.Collator("en", { sensitivity: "base", numeric: true });
 const number = new Intl.NumberFormat("en-US");
@@ -67,6 +68,7 @@ function teamDivisionGroups(league) {
 }
 
 function renderTeamNavigation() {
+  const leagueView = state.view === "league-transactions";
   const openDivisions = new Set(
     Array.from(divisionList.querySelectorAll("details[open]"), division => division.dataset.division),
   );
@@ -79,7 +81,7 @@ function renderTeamNavigation() {
   divisionList.innerHTML = Array.from(groups, ([division, teams]) => {
     const isOpen = (division === selectedDivision || openDivisions.has(division)) ? "open" : "";
     const rows = teams.map(team => {
-      const active = team.id === state.team.id && !state.search ? 'aria-current="true"' : "";
+      const active = !leagueView && team.id === state.team.id && !state.search ? 'aria-current="true"' : "";
       return `<li><button class="team-button" type="button" data-team="${team.id}" ${active}>
         <img src="${logo(team)}" width="24" height="24" alt="">
         <span>${escape(team.shortNameZh)}</span><span class="team-abbr">${escape(team.abbr)}</span>
@@ -93,11 +95,11 @@ function renderTeamNavigation() {
     </details>`;
   }).join("");
 
-  teamSelect.value = String(state.team.id);
+  teamSelect.value = leagueView ? "" : String(state.team.id);
 }
 
 function setMobileTeams() {
-  teamSelect.innerHTML = ["NL", "AL"].flatMap(league =>
+  const options = ["NL", "AL"].flatMap(league =>
     Array.from(teamDivisionGroups(league), ([, teams]) => {
       const options = teams.map(team =>
         `<option value="${team.id}">${escape(team.nameZh)}（${escape(team.abbr)}）</option>`,
@@ -105,6 +107,7 @@ function setMobileTeams() {
       return `<optgroup label="${leagueNames[league]}${escape(teams[0].divisionZh)}">${options}</optgroup>`;
     }),
   ).join("");
+  teamSelect.innerHTML = '<option value="" disabled>選擇球隊</option>' + options;
 }
 
 function renderHeading() {
@@ -114,6 +117,14 @@ function renderHeading() {
       <h2 id="roster-title" tabindex="-1">搜尋結果</h2>
       <p>從 ${snapshot.teamCount} 支球隊搜尋「${escape(state.search)}」</p>
     </div>`;
+    return;
+  }
+  if (state.view === "league-transactions") {
+    viewHeading.innerHTML = `<div class="search-heading">
+      <h2 id="roster-title" tabindex="-1">全聯盟異動</h2>
+      <p>${snapshot.teamCount} 支球隊</p>
+    </div>
+    <a class="source-link" href="${officialTransactionsUrl()}" target="_blank" rel="noopener noreferrer">官方異動 ${icon("external")}</a>`;
     return;
   }
   const team = state.team;
@@ -216,12 +227,12 @@ function renderRosterResults() {
 
 function renderView() {
   const currentView = state.search ? "roster" : state.view;
-  const showTransactions = currentView === "transactions";
+  const showTransactions = transactionViews.has(currentView);
   for (const link of viewLinks) {
     const view = link.dataset.teamView;
     link.classList.toggle("nav-current", view === currentView);
     const params = new URLSearchParams({ team: state.team.abbr });
-    if (view === "transactions") params.set("view", view);
+    if (transactionViews.has(view)) params.set("view", view);
     link.href = `?${params}#roster`;
   }
   teamViewSwitch.hidden = Boolean(state.search);
@@ -233,7 +244,8 @@ function renderView() {
   transactionsPanel.hidden = !showTransactions;
   if (showTransactions) {
     byId("results-status").textContent = "";
-    transactionView.open(state.team);
+    transactionsPanel.setAttribute("aria-label", currentView === "league-transactions" ? "全聯盟異動" : "球隊異動");
+    transactionView.open(currentView === "league-transactions" ? null : state.team);
   } else {
     transactionView.close();
     renderRosterResults();
@@ -251,7 +263,7 @@ function updateURL() {
   url.searchParams.set("team", state.team.abbr);
   if (state.search) url.searchParams.set("q", state.search);
   else url.searchParams.delete("q");
-  if (state.view === "transactions") url.searchParams.set("view", state.view);
+  if (transactionViews.has(state.view)) url.searchParams.set("view", state.view);
   else url.searchParams.delete("view");
   history.replaceState(null, "", url);
 }
@@ -259,6 +271,7 @@ function updateURL() {
 function selectTeam(team, jump = false, preserveTeamFocus = false) {
   state.team = team;
   state.league = team.league;
+  if (state.view === "league-transactions") state.view = "transactions";
   state.position = "all";
   state.search = "";
   state.expanded.clear();
@@ -295,6 +308,7 @@ function selectView(view, jump = false) {
     applySearch();
   } else {
     updateURL();
+    renderTeamNavigation();
     renderHeading();
     renderView();
   }
@@ -475,7 +489,8 @@ async function start() {
     const selectedAbbr = params.get("team")?.toUpperCase() ?? "LAD";
     state.team = snapshot.teams.find(team => team.abbr === selectedAbbr) ?? teamMap.get(119);
     state.league = state.team.league;
-    state.view = params.get("view") === "transactions" ? "transactions" : "roster";
+    const requestedView = params.get("view");
+    state.view = transactionViews.has(requestedView) ? requestedView : "roster";
     state.search = params.get("q")?.trim() ?? "";
     searchInput.value = state.search;
     clearSearch.hidden = !state.search;

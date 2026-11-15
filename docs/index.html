@@ -9,8 +9,8 @@
   <link rel="icon" href="assets/baseball.png" type="image/png">
   <link rel="preload" href="assets/inter.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preconnect" href="https://img.mlbstatic.com" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=2">
-  <script type="module" src="app.js?v=2"></script>
+  <link rel="stylesheet" href="styles.css?v=3">
+  <script type="module" src="app.js?v=3"></script>
 </head>
 <body id="top">
   <a class="skip-link" href="#roster">跳到球員名單</a>
@@ -23,6 +23,7 @@
       <nav aria-label="主要導覽" class="header-nav">
         <a class="nav-current" href="#roster" data-team-view="roster">球隊名單</a>
         <a href="?view=transactions#roster" data-team-view="transactions">球隊異動</a>
+        <a href="?view=league-transactions#roster" data-team-view="league-transactions">全聯盟異動</a>
         <a href="#sources" class="source-nav">資料來源</a>
       </nav>
       <details class="downloads" id="downloads">
@@ -82,6 +83,7 @@
         <div class="team-view-switch" id="team-view-switch" role="group" aria-label="查看球隊資料" hidden>
           <button type="button" data-team-view="roster" aria-pressed="true">40 人名單</button>
           <button type="button" data-team-view="transactions" aria-pressed="false">球隊異動</button>
+          <button type="button" data-team-view="league-transactions" aria-pressed="false">全聯盟異動</button>
         </div>
         <div class="roster-toolbar" id="roster-toolbar" hidden>
           <div id="position-filters" class="position-filters" role="group" aria-label="依守備位置篩選">
@@ -143,7 +145,7 @@
         <h2>資料來源</h2>
         <p>名單由 <a href="https://www.mlb.com/team" target="_blank" rel="noopener noreferrer">MLB 官方資料</a>彙整。依 <a href="https://www.mlb.com/glossary/transactions/40-man-roster" target="_blank" rel="noopener noreferrer">40 人名單規則</a>計算，60 天傷兵不計入。</p>
         <p>開啟頁面後，網站在前景每 2 分鐘查詢 MLB 官方名單。頁首時間採台灣時間。</p>
-        <p>球隊異動的日期依 MLB 官方紀錄。「球隊異動」開啟時在前景每 2 分鐘查詢一次。</p>
+        <p>異動日期依 MLB 官方紀錄。瀏覽球隊或全聯盟異動時，網站在前景每 2 分鐘查詢最新異動。</p>
         <p class="photo-credit">球場照片 <a href="https://commons.wikimedia.org/wiki/File:Dodger_Stadium_Field.jpg" target="_blank" rel="noopener noreferrer">Jesuiseduardo／Wikimedia Commons</a>，<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>，經縮放及裁切。</p>
       </div>
       <a class="top-link" href="#top">回到頂端 <span class="icon icon-up" aria-hidden="true"></span></a>

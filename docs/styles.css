@@ -566,6 +566,17 @@ summary::-webkit-details-marker { display: none; }
 .transaction-copy p { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
 .transaction-copy a { text-underline-offset: 3px; text-decoration-color: #bdc9d6; }
 .transaction-copy a:hover { color: var(--blue); }
+.transaction-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 12px; }
+.transaction-club {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 750;
+}
+.transaction-club img { flex-shrink: 0; object-fit: contain; }
+.transaction-copy h3 .transaction-club { font-size: inherit; }
 .transaction-label {
   display: inline-block;
   border-radius: 5px;
@@ -589,6 +600,7 @@ summary::-webkit-details-marker { display: none; }
   line-height: 1.55;
 }
 .transaction-trade div { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px; }
+.transaction-trade-league div { grid-template-columns: minmax(155px, max-content) minmax(0, 1fr); }
 .transaction-trade dt { color: var(--muted); font-weight: 700; }
 .transaction-trade dd { margin: 0; }
 
@@ -812,6 +824,7 @@ summary::-webkit-details-marker { display: none; }
   .header-inner { min-height: 59px; gap: 10px; }
   .header-nav { gap: 15px; }
   .header-nav a { font-size: 12px; }
+  .header-nav .source-nav { display: none; }
   .brand { font-size: 14px; gap: 6px; }
   .brand-mark { width: 31px; height: 31px; }
   .downloads summary { min-height: 34px; font-size: 12px; }
@@ -865,8 +878,9 @@ summary::-webkit-details-marker { display: none; }
   .source-link { padding: 5px 6px; font-size: 10px; gap: 3px; }
   .roster-toolbar { flex-wrap: wrap; }
   .team-view-switch { width: 100%; }
-  .team-view-switch button { flex: 1; min-height: 42px; }
+  .team-view-switch button { flex: 1; min-height: 42px; padding-inline: 7px; }
   .transaction-item { grid-template-columns: minmax(0, 1fr); gap: 4px; padding: 11px 12px; }
+  .transaction-trade-league div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .transaction-date { padding-block: 0 2px; }
   .transaction-toolbar .position-filters button { min-height: 38px; padding-inline: 7px; }
   .sort-control { margin-left: auto; }
