@@ -22,6 +22,12 @@ python scripts/update-savant.py --through 2026
 
 Baseball Savant 歷史資料自 2015 年起。較早或缺少紀錄的球季由 MLB Stats API 補充可用的進階欄位。
 
+打者的 wRC+ 與投手的 ERA- 取自 [FanGraphs 例行賽排行榜](https://www.fangraphs.com/leaders/major-league)，以 MLB 球員 ID 和球季配對。同季轉隊使用 FanGraphs 的整季合計。下列指令預設從名單中最早的 MLB 初登場球季開始抓取，可用 `--since` 指定更早的年份。
+
+```bash
+python scripts/update-fangraphs.py --through 2026
+```
+
 ## 更新資料
 
 使用 Python 3.9 以上版本，在專案目錄執行以下命令。預設以台灣當日為取樣日期。若需要重新取得當日資料並核對各隊的 MLB 官網頁面，可加上 `--verify-current-pages`。歷史日期參數為 `--date YYYY-MM-DD`。
