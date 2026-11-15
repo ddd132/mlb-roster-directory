@@ -2,6 +2,13 @@ import { taipeiTime } from "./mlb.js";
 
 const ROLE_LABEL = { hitting: "打擊", pitching: "投球" };
 const SAMPLE_LABEL = { hitting: "打席", pitching: "對戰打席" };
+const LOWER_IS_BETTER = {
+  hitting: new Set(["K%", "Whiff%", "Chase%"]),
+  pitching: new Set([
+    "ERA", "WHIP", "BB/9", "OPS", "ERA-", "BABIP", "xERA", "xwOBA", "xBA", "xSLG",
+    "EV", "Barrel%", "Hard-Hit%", "BB%",
+  ]),
+};
 const TRADITIONAL = {
   hitting: [
     ["AVG", "打擊率", 3], ["OBP", "上壘率", 3], ["SLG", "長打率", 3], ["OPS", "攻擊指數", 3],
@@ -73,17 +80,37 @@ function actualValue(key, value, digits, unit) {
   return (digits === 3 ? numeric.replace(/^0(?=\.)/, "") : numeric) + (unit ?? "");
 }
 
+function isPercentile(rank) {
+  return Number.isInteger(rank) && rank >= 0 && rank <= 100;
+}
+
+function referencePercentile(peers, valueIndex, value, lowerIsBetter) {
+  let sample = 0;
+  let behind = 0;
+  let tied = 0;
+  for (const row of peers) {
+    const peerValue = row[valueIndex];
+    if (!Number.isFinite(peerValue) || !isPercentile(row[valueIndex + 1])) continue;
+    sample += 1;
+    if (peerValue === value) tied += 1;
+    else if (lowerIsBetter ? peerValue > value : peerValue < value) behind += 1;
+  }
+  return sample ? Math.round(100 * (behind + tied / 2) / sample) : null;
+}
+
 function metricRow(definition, values) {
   const [key, name, digits, unit] = definition;
-  const [value, rank] = values.get(key) ?? [];
-  const hasRank = Number.isInteger(rank) && rank >= 0 && rank <= 100;
+  const [value, rank, reference] = values.get(key) ?? [];
+  const hasRank = isPercentile(rank);
   const tone = rank < 50 ? "#30578f" : "#b3222d";
   const strength = Math.abs(rank - 50) * 2;
   const properties = hasRank ? ` style="--pr:${rank}%;--pr-tone:color-mix(in srgb,${tone} ${strength}%,#617381)"` : "";
+  const marker = reference ? '<sup aria-hidden="true">＊</sup>' : "";
+  const rankLabel = reference ? "參考 PR " : "PR ";
   return `<li class="pr-row" data-metric="${key}">
-    <span class="pr-metric"><strong>${key}</strong><small>${name}</small></span>
+    <span class="pr-metric"><strong>${key}${marker}</strong><small>${name}</small></span>
     <span class="pr-track"${properties}>
-      ${hasRank ? `<span class="pr-fill" aria-hidden="true"></span><span class="pr-badge"><span class="visually-hidden">PR </span>${rank}</span>` :
+      ${hasRank ? `<span class="pr-fill" aria-hidden="true"></span><span class="pr-badge"><span class="visually-hidden">${rankLabel}</span>${rank}</span>` :
         '<span class="pr-unranked"><span aria-hidden="true">—</span><span class="visually-hidden">無百分位</span></span>'}
     </span>
     <span class="pr-actual"><span class="visually-hidden">實際數值 </span>${actualValue(key, value, digits, unit)}</span>
@@ -110,7 +137,8 @@ function sourceDetails(role, year, board, capturedAt) {
   return `<details class="pr-sources">
     <summary>比較方式與資料來源</summary>
     <p>比較範圍為同一球季的 MLB 例行賽，合併美聯與國聯。同季轉隊採整季合計。${direction}</p>
-    <p>${statcast}${history} 傳統比率、BABIP${extra}及 <a href="https://www.fangraphs.com/leaders/major-league" target="_blank" rel="noopener noreferrer">FanGraphs 的 ${role === "hitting" ? "wRC+" : "ERA-"}</a> 由本站換算百分位，門檻為 ${board.minimum} ${SAMPLE_LABEL[role]}。本季有 ${board.qualified} 位${role === "hitting" ? "打者" : "投手"}達到此門檻。</p>
+    <p>${statcast}${history} 傳統比率、BABIP${extra}及 <a href="https://www.fangraphs.com/leaders/major-league" target="_blank" rel="noopener noreferrer">FanGraphs 的 ${role === "hitting" ? "wRC+" : "ERA-"}</a> 由本站換算百分位。這些指標的比較組是同季達 ${board.minimum} ${SAMPLE_LABEL[role]}的 ${board.qualified} 位${role === "hitting" ? "打者" : "投手"}。</p>
+    <p>標有＊的參考 PR 以同季、同一指標已有數值和排名的球員作比較。樣本越少，單場結果對 PR 的影響越大。</p>
     <p>累計數據比較所有有${SAMPLE_LABEL[role]}紀錄的球員。本站換算時，同值球員採並列名次的中點。<a href="https://www.mlb.com/stats/" target="_blank" rel="noopener noreferrer">MLB 傳統數據</a>與各來源快照取用日期為 ${taipeiTime(capturedAt).date}。</p>
   </details>`;
 }
@@ -121,10 +149,21 @@ function showCharts(panel, group, year, board, playerId, capturedAt) {
     panel.innerHTML = '<div class="empty-state"><strong>此球季尚無球員排名</strong><p>可以切換球季，或在基本成績查看這一年的資料。</p></div>';
     return;
   }
-  const values = new Map(board.columns.map((key, index) => [key, [row[2 * index + 1], row[2 * index + 2]]]));
+  const peers = Object.values(board.players);
+  const values = new Map(board.columns.map((key, index) => {
+    const valueIndex = 2 * index + 1;
+    const value = row[valueIndex];
+    const rank = row[valueIndex + 1];
+    if (isPercentile(rank) || !Number.isFinite(value)) return [key, [value, rank]];
+
+    const reference = referencePercentile(peers, valueIndex, value, LOWER_IS_BETTER[group].has(key));
+    return [key, [value, reference, isPercentile(reference)]];
+  }));
   const advanced = ADVANCED[group].filter(([key]) => values.get(key)?.some(Number.isFinite));
-  const sample = row[0] < board.minimum ? ` · 本站比率 PR 門檻 ${board.minimum} ${SAMPLE_LABEL[group]}` : "";
-  panel.innerHTML = `<p class="pr-sample">${countFormat.format(row[0])} ${SAMPLE_LABEL[group]}${sample} · PR 越高代表該項表現越靠前，50 居中。<span>— 表示無百分位或來源缺值。</span></p>
+  const sample = row[0] < board.minimum ? " · 小樣本" : "";
+  const referenceNote = [...values.values()].some(([, , reference]) => reference)
+    ? "＊ 為本站補算的參考 PR。" : "";
+  panel.innerHTML = `<p class="pr-sample">${countFormat.format(row[0])} ${SAMPLE_LABEL[group]}${sample} · PR 越高代表該項表現越靠前，50 居中。<span>${referenceNote}— 表示缺少可用數值或比較資料。</span></p>
     <nav class="stat-jumps pr-jumps" aria-label="跳到百分位類別"><a href="#pr-advanced">進階數據</a><a href="#pr-traditional">傳統數據</a></nav>
     <div class="pr-grid">
       ${chart("pr-advanced", "進階數據", advanced, values)}
