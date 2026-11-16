@@ -12,7 +12,9 @@ const positionFilters = byId("position-filters");
 const sortSelect = byId("sort-select");
 const resultList = byId("player-results");
 const teamViewSwitch = byId("team-view-switch");
-const viewLinks = byId("site-menu").querySelectorAll("a[data-team-view]");
+const featureDropdown = byId("feature-dropdown");
+const featureMenu = byId("site-menu");
+const viewLinks = featureMenu.querySelectorAll("a[data-team-view]");
 const minorsLinks = document.querySelectorAll("[data-minors-link]");
 const rosterToolbar = byId("roster-toolbar");
 const transactionsPanel = byId("transactions-panel");
@@ -238,7 +240,6 @@ function renderView() {
     link.href = `?${params}#roster`;
   }
   for (const link of minorsLinks) link.href = `minors.html?team=${encodeURIComponent(state.team.abbr)}`;
-  byId("feature-team-detail").textContent = `查看${state.team.nameZh}的異動`;
   teamViewSwitch.hidden = Boolean(state.search);
   for (const button of teamViewSwitch.querySelectorAll("button")) {
     button.setAttribute("aria-pressed", String(button.dataset.teamView === currentView));
@@ -395,14 +396,25 @@ function connectEvents() {
 }
 
 function installIndependentEvents() {
+  const headerDropdowns = [featureDropdown, downloadMenu];
   document.addEventListener("click", event => {
-    if (downloadMenu.open && !downloadMenu.contains(event.target)) downloadMenu.open = false;
-  });
-  downloadMenu.addEventListener("keydown", event => {
-    if (event.key === "Escape" && downloadMenu.open) {
-      downloadMenu.open = false;
-      downloadMenu.querySelector("summary").focus();
+    for (const dropdown of headerDropdowns) {
+      if (dropdown.open && !dropdown.contains(event.target)) dropdown.open = false;
     }
+  });
+  for (const dropdown of headerDropdowns) {
+    dropdown.addEventListener("keydown", event => {
+      if (event.key !== "Escape" || !dropdown.open) return;
+      event.preventDefault();
+      dropdown.open = false;
+      dropdown.querySelector("summary").focus();
+    });
+    dropdown.addEventListener("focusout", event => {
+      if (dropdown.open && event.relatedTarget && !dropdown.contains(event.relatedTarget)) dropdown.open = false;
+    });
+  }
+  featureMenu.addEventListener("click", event => {
+    if (event.target.closest("a")) featureDropdown.open = false;
   });
   installPhotoFallback();
   connectDownloads();
