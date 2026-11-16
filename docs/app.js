@@ -12,7 +12,7 @@ const positionFilters = byId("position-filters");
 const sortSelect = byId("sort-select");
 const resultList = byId("player-results");
 const teamViewSwitch = byId("team-view-switch");
-const viewLinks = document.querySelectorAll(".header-nav [data-team-view]");
+const viewLinks = byId("site-menu").querySelectorAll("a[data-team-view]");
 const minorsLinks = document.querySelectorAll("[data-minors-link]");
 const rosterToolbar = byId("roster-toolbar");
 const transactionsPanel = byId("transactions-panel");
@@ -231,12 +231,14 @@ function renderView() {
   const showTransactions = transactionViews.has(currentView);
   for (const link of viewLinks) {
     const view = link.dataset.teamView;
-    link.classList.toggle("nav-current", view === currentView);
+    if (view === currentView) link.setAttribute("aria-current", "true");
+    else link.removeAttribute("aria-current");
     const params = new URLSearchParams({ team: state.team.abbr });
     if (transactionViews.has(view)) params.set("view", view);
     link.href = `?${params}#roster`;
   }
   for (const link of minorsLinks) link.href = `minors.html?team=${encodeURIComponent(state.team.abbr)}`;
+  byId("feature-team-detail").textContent = `查看${state.team.nameZh}的異動`;
   teamViewSwitch.hidden = Boolean(state.search);
   for (const button of teamViewSwitch.querySelectorAll("button")) {
     button.setAttribute("aria-pressed", String(button.dataset.teamView === currentView));
@@ -284,7 +286,7 @@ function selectTeam(team, jump = false, preserveTeamFocus = false) {
   renderTeamNavigation();
   renderHeading();
   renderView();
-  if (jump || byId("roster-title").getBoundingClientRect().top < 0) {
+  if (jump || byId("roster-title").getBoundingClientRect().top < byId("home-header").offsetHeight) {
     focusResults();
   } else if (preserveTeamFocus) {
     divisionList.querySelector(`[data-team="${team.id}"]`)?.focus();
@@ -314,7 +316,10 @@ function selectView(view, jump = false) {
     renderHeading();
     renderView();
   }
-  if (jump) focusResults();
+  if (jump) {
+    history.replaceState(null, "", "#roster");
+    focusResults();
+  }
 }
 
 function connectEvents() {
