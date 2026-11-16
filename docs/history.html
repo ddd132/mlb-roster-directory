@@ -8,9 +8,10 @@
 <title>歷年球隊名單｜球員圖鑑</title>
 <link rel="icon" href="assets/baseball.png" type="image/png">
 <link rel="stylesheet" href="styles.css?v=4">
-<script type="module" src="history.js?v=1"></script>
+<script type="module" src="history.js?v=2"></script>
 <style>
 .history-header {display:flex;justify-content:space-between;align-items:center;gap:9px;min-height:60px}
+.history-header nav {display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
 .history-banner {background:radial-gradient(ellipse at 87% 110%,#225e8d,transparent 72%),var(--navy);color:white;padding:29px 0 32px}
 .history-banner h1 {margin:0;font-size:clamp(29px,5vw,51px);letter-spacing:-.04em}
 .history-banner p {margin:7px 0 0;font-size:14px;color:#dae6f2}
@@ -40,7 +41,10 @@
 <header class="site-header">
   <div class="shell history-header">
     <a class="brand" href="./"><img class="brand-mark" src="assets/baseball.png" alt="" width="36" height="36"><span>球員圖鑑</span></a>
-    <a class="source-link" href="./#roster">現役 40 人名單</a>
+    <nav aria-label="網站導覽">
+      <a class="source-link" href="./#roster">現役 40 人名單</a>
+      <a class="source-link" id="history-standings" href="standings.html">歷年戰績</a>
+    </nav>
   </div>
 </header>
 <main>

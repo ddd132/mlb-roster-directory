@@ -1,14 +1,6 @@
-import { escape, mlbCalendarDate } from "./mlb.js";
+import { escape } from "./mlb.js";
+import { availableSeasons, FIRST_SEASON, LAST_ARCHIVE, leagueName, loadArchive, MLB_LEAGUES, request } from "./history-data.js";
 
-const API = "https://statsapi.mlb.com/api/v1";
-const LAST_ARCHIVE = 2025;
-const LEAGUES = {
-  AL: "美國聯盟", NL: "國家聯盟", NA: "國家協會（1871–1875）",
-  AA: "美國協會", UA: "聯合協會", PL: "球員聯盟", FL: "聯邦聯盟",
-  NNL: "黑人國家聯盟（第一期）", NN2: "黑人國家聯盟（第二期）",
-  ECL: "東部有色聯盟", ANL: "美國黑人聯盟（1929）", EWL: "東西聯盟",
-  NSL: "黑人南方聯盟", NAL: "黑人美國聯盟",
-};
 const FRANCHISE = { AZ: "ARI", KC: "KCR", ATH: "OAK", LAA: "ANA", MIA: "FLA", TB: "TBD", WSH: "WSN", SD: "SDP", SF: "SFG" };
 const element = id => document.getElementById("history-" + id);
 const query = new URLSearchParams(location.search);
@@ -23,7 +15,6 @@ const rosterRequests = new Map();
 const matches = text => String(text).normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 const historyUrl = params => "history.html?" + new URLSearchParams(params).toString();
 const empty = message => `<div class="empty-state"><strong>${escape(message)}</strong></div>`;
-const leagueName = name => LEAGUES[name] ?? name;
 
 let archiveRequest, seasonTeams = [], selectedRoster, targetRequest = 0;
 
@@ -35,38 +26,14 @@ function memo(cache, key, action) {
   return cache.get(key);
 }
 
-async function request(path, params) {
-  const response = await fetch(API + path + "?" + new URLSearchParams(params), { signal: AbortSignal.timeout(20_000) });
-  if (!response.ok) throw new Error("MLB Stats API HTTP " + response.status);
-  return response.json();
-}
-
 function getArchive() {
-  archiveRequest ??= fetch("history-archive.json.gz?v=1", { signal: AbortSignal.timeout(24_000) }).then(async response => {
-    if (!response.ok) throw new Error("Could not load the historical archive");
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    const data = bytes[0] === 0x1f && bytes[1] === 0x8b
-      ? await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).json()
-      : JSON.parse(new TextDecoder().decode(bytes));
-    if (data.through !== LAST_ARCHIVE || !data.seasons[1871] || !Array.isArray(data.players)) {
+  archiveRequest ??= loadArchive("history-archive.json.gz?v=1").then(data => {
+    if (data.through !== LAST_ARCHIVE || !data.seasons?.[FIRST_SEASON] || !Array.isArray(data.players)) {
       throw new Error("Invalid historical archive");
     }
     return data;
   }).catch(error => { archiveRequest = null; throw error; });
   return archiveRequest;
-}
-
-async function years() {
-  const date = mlbCalendarDate();
-  let latest = Math.max(LAST_ARCHIVE, Number(date.slice(0, 4)));
-  try {
-    const { seasons } = await request("/seasons/all", { sportId: 1, fields: "seasons,seasonId,regularSeasonStartDate" });
-    latest = Math.max(LAST_ARCHIVE, ...seasons.filter(s => s.regularSeasonStartDate && s.regularSeasonStartDate <= date)
-      .map(s => Number(s.seasonId)));
-  } catch (error) {
-    console.warn("Using calendar year for the season selector", error);
-  }
-  return Array.from({ length: latest - 1870 }, (_, i) => latest - i);
 }
 
 function getTeams(year) {
@@ -80,7 +47,7 @@ function getTeams(year) {
     });
     return teams.map(team => ({
       key: String(team.id), id: team.id, name: team.name,
-      league: team.league?.id === 103 ? "AL" : team.league?.id === 104 ? "NL" : team.league?.name ?? "",
+      league: MLB_LEAGUES[team.league?.id] ?? team.league?.name ?? "",
       franchise: FRANCHISE[team.abbreviation] ?? team.abbreviation,
     }));
   });
@@ -156,6 +123,7 @@ function updateUrl() {
     else url.searchParams.delete(key);
   }
   history.replaceState(null, "", url);
+  element("standings").href = "standings.html?season=" + state.year;
 }
 
 function rosterLink(player, team) {
@@ -256,13 +224,14 @@ async function showLegacyPlayer(pid) {
 }
 
 async function start() {
+  if (state.year >= FIRST_SEASON) element("standings").href = "standings.html?season=" + state.year;
   const legacy = query.get("player");
   if (legacy) {
     try { await showLegacyPlayer(legacy); }
     catch (error) { showError(error, start); }
     return;
   }
-  const available = await years();
+  const available = await availableSeasons();
   if (!available.includes(state.year)) state.year = available[0];
   element("filters").hidden = false;
   options("year", available.map(year => [year, year]), state.year);

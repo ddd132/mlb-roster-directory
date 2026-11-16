@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101d2e">
+  <meta name="description" content="依球季查看大聯盟各隊的例行賽戰績、分區排名及季後賽冠軍。">
+  <title>歷年戰績｜球員圖鑑</title>
+  <link rel="icon" href="assets/baseball.png" type="image/png">
+  <link rel="stylesheet" href="styles.css?v=4">
+  <script type="module" src="standings.js?v=1"></script>
+  <style>
+    .standings-header {display:flex;justify-content:space-between;align-items:center;min-height:60px;gap:10px}
+    .standings-nav {display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+    .standings-main {padding-block:26px 34px}
+    .standings-intro {display:flex;align-items:end;justify-content:space-between;gap:14px;margin-bottom:16px}
+    .standings-intro h1 {font-size:clamp(30px,5vw,52px);letter-spacing:-.045em;margin:0}
+    .standings-intro p,.standings-note {color:var(--muted);font-size:13px;line-height:1.65;margin:5px 0 0}
+    .standings-select {display:grid;gap:4px;min-width:0;color:var(--muted);font-size:12px;font-weight:750}
+    .standings-select select {min-height:40px;max-width:100%;padding:6px 28px 6px 9px;background:white;color:var(--ink);border:1px solid #cdd8e2;border-radius:6px;font-size:16px}
+    .standings-season {min-width:110px}
+    .champion-list {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:12px}
+    .champion-card {color:white;background:radial-gradient(ellipse at 100% 140%,#205786,transparent 85%),var(--navy);border-radius:10px;padding:18px 20px}
+    .champion-card h2 {margin:4px 0;font-size:clamp(20px,3.3vw,35px);line-height:1.14;letter-spacing:-.035em;overflow-wrap:anywhere}
+    .champion-card a {text-underline-offset:4px;text-decoration-thickness:1px}
+    .champion-label {margin:0 0 7px;color:#ffd4a0;font-size:13px;font-weight:800}
+    .champion-detail {margin:7px 0 0;color:#dce8f4;font-size:13px;line-height:1.5}
+    .champion-main {display:flex;justify-content:space-between;align-items:center;gap:14px}
+    .champion-score {font-size:clamp(25px,3.6vw,45px);font-weight:800;white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums}
+    .standings-section {margin-top:24px}
+    .standings-toolbar {display:flex;justify-content:space-between;align-items:end;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+    .standings-toolbar h2 {margin:0;font-size:clamp(20px,3vw,27px);letter-spacing:-.025em}
+    .standings-filters {display:flex;align-items:end;flex-wrap:wrap;gap:8px}
+    .standings-modes {display:inline-flex;gap:3px;padding:3px;background:#e8edf2;border:1px solid #d7e0e8;border-radius:7px}
+    .standings-modes button {min-height:32px;border:0;background:transparent;padding:4px 9px;font-weight:750;font-size:13px;border-radius:4px;white-space:nowrap}
+    .standings-modes button[aria-pressed="true"] {background:var(--navy);color:white}
+    .standings-ranks {display:grid;gap:16px}
+    .standings-groups {grid-template-columns:repeat(auto-fit,minmax(min(100%,410px),1fr));align-items:start}
+    .standings-ranks h3 {font-size:16px;margin:2px 0 7px}
+    .standings-table {width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;background:white;border:1px solid #dce4ec;border-radius:8px;font-size:14px;text-align:left}
+    .standings-table th,.standings-table td {padding:8px 10px}
+    .standings-table thead th {font-size:12px;background:#17283b;color:white;white-space:nowrap}
+    .standings-table tbody tr:nth-child(even) {background:#f4f7fa}
+    .standings-table tbody tr+tr>* {border-top:1px solid #e9edf2}
+    .standings-table .number {width:10%;text-align:right;font-variant-numeric:tabular-nums}
+    .standings-table .rank {width:8%;text-align:center;color:#40576f;font-weight:750}
+    .standings-table th.rank {color:white}
+    .standings-table a {text-underline-offset:3px;overflow-wrap:anywhere}
+    .standings-table a:hover {color:#1c6397}
+    .standings-table small {display:block;color:var(--muted);font-size:11px;font-weight:500;margin-top:3px}
+    .standings-foot {margin-top:16px}
+    @media(max-width:550px) {
+      .standings-main {padding-top:19px}
+      .standings-intro {align-items:start}
+      .standings-intro p {max-width:250px}
+      .standings-season {min-width:86px}
+      .standings-select select {padding-right:6px}
+      .champion-card {padding:14px 12px}
+      .standings-table {font-size:13px}
+      .standings-table th,.standings-table td {padding:8px 6px}
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#standings-content">跳到歷年戰績</a>
+  <header class="site-header">
+    <div class="shell standings-header">
+      <a class="brand" href="./" aria-label="球員圖鑑首頁"><img class="brand-mark" src="assets/baseball.png" alt="" width="36" height="36"><span>球員圖鑑</span></a>
+      <nav class="standings-nav" aria-label="網站導覽">
+        <a class="source-link" href="./">首頁</a>
+        <a class="source-link" id="standings-history" href="history.html">歷年球隊名單</a>
+      </nav>
+    </div>
+  </header>
+  <main class="shell standings-main" id="standings-content">
+    <header class="standings-intro">
+      <div><h1>歷年戰績</h1><p>從 1871 年起，查閱各隊例行賽戰績與季後賽冠軍。</p></div>
+      <label class="standings-select standings-season" for="standings-year">球季<select id="standings-year" disabled></select></label>
+    </header>
+    <section class="champion-list" id="standings-champions" aria-label="季後賽結果" aria-live="polite"></section>
+    <section class="standings-section" aria-labelledby="standings-title">
+      <div class="standings-toolbar">
+        <div><h2 id="standings-title">例行賽排名</h2><p class="standings-note" id="standings-meta" aria-live="polite"></p></div>
+        <div class="standings-filters" id="standings-filters" hidden>
+          <label class="standings-select" for="standings-league">聯盟<select id="standings-league"></select></label>
+          <div class="standings-modes" role="group" aria-label="排名方式">
+            <button id="standings-overall" type="button" aria-pressed="true">依勝率</button>
+            <button id="standings-groups" type="button" aria-pressed="false">依分區／聯盟</button>
+          </div>
+        </div>
+      </div>
+      <div class="standings-ranks" id="standings-results" aria-busy="true"><p class="loading-message">正在載入球季…</p></div>
+    </section>
+    <p class="standings-note standings-foot">1871–2025 年戰績與季後賽結果依 <a href="https://sabr.org/lahman-database/" target="_blank" rel="noopener noreferrer">Lahman Baseball Database</a> 編製，原始資料 © 1996–2025 SABR，彙整資料採 <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 3.0</a>。2026 年起查詢 <a href="https://www.mlb.com/standings" target="_blank" rel="noopener noreferrer">MLB 官方戰績</a>與世界大賽賽程。早期賽事參照 <a href="https://www.baseball-reference.com/postseason/" target="_blank" rel="noopener noreferrer">Baseball Reference</a>。</p>
+  </main>
+</body>
+</html>
