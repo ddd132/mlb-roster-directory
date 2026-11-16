@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101d2e">
+<meta name="description" content="依球季與當年的球隊名稱查閱大聯盟歷史出賽球員">
+<title>歷年球隊名單｜球員圖鑑</title>
+<link rel="icon" href="assets/baseball.png" type="image/png">
+<link rel="stylesheet" href="styles.css?v=4">
+<script type="module" src="history.js?v=1"></script>
+<style>
+.history-header {display:flex;justify-content:space-between;align-items:center;gap:9px;min-height:60px}
+.history-banner {background:radial-gradient(ellipse at 87% 110%,#225e8d,transparent 72%),var(--navy);color:white;padding:29px 0 32px}
+.history-banner h1 {margin:0;font-size:clamp(29px,5vw,51px);letter-spacing:-.04em}
+.history-banner p {margin:7px 0 0;font-size:14px;color:#dae6f2}
+.history-body {padding-block:17px 31px}
+.history-controls {display:grid;grid-template-columns:1fr 2fr 2fr 2fr;gap:9px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:12px}
+.history-controls label {display:grid;gap:5px;min-width:0;font-size:12px;color:var(--muted);font-weight:700}
+.history-controls select,.history-controls input {width:100%;min-width:0;min-height:41px;background:white;border:1px solid #d6dfe8;border-radius:6px;padding:6px 7px;color:var(--ink);font-size:15px}
+.history-title {font-size:clamp(21px,4vw,35px);letter-spacing:-.035em;margin:17px 0 4px}
+.history-note {font-size:13px;color:var(--muted);line-height:1.65;margin:4px 0 11px}
+.history-table {width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;background:white;border:1px solid #dce3e9;border-radius:8px;text-align:left;font-size:14px}
+.history-table th,.history-table td {padding:9px 11px}
+.history-table thead th {background:#17283b;color:white;font-size:12px}
+.history-table tbody tr:nth-child(even) {background:#f7f9fc}
+.history-table tbody tr+tr td,.history-table tbody tr+tr th {border-top:1px solid #e9edf2}
+.history-table a {text-underline-offset:3px}
+.history-table a:hover {color:#1c6397}
+.history-table .role {white-space:nowrap;font-variant-numeric:tabular-nums}
+.history-links {display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.history-foot {margin-top:17px}
+.history-foot a {text-underline-offset:3px}
+@media(max-width:650px) {.history-controls {grid-template-columns:1fr 1fr}.history-controls select,.history-controls input {font-size:16px}}
+@media(max-width:390px) {.history-controls {padding:8px}.history-table {font-size:13px}.history-table th,.history-table td {padding:8px 6px}}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#history-filters">跳到球季與球隊</a>
+<header class="site-header">
+  <div class="shell history-header">
+    <a class="brand" href="./"><img class="brand-mark" src="assets/baseball.png" alt="" width="36" height="36"><span>球員圖鑑</span></a>
+    <a class="source-link" href="./#roster">現役 40 人名單</a>
+  </div>
+</header>
+<main>
+  <header class="history-banner"><div class="shell"><h1>歷年球隊名單</h1><p>從 1871 年起，按球季和球隊查閱有出賽紀錄的球員。</p></div></header>
+  <div class="shell history-body">
+    <div id="history-filters" class="history-controls" hidden>
+      <label for="history-year">球季<select id="history-year"></select></label>
+      <label for="history-league">聯盟<select id="history-league"></select></label>
+      <label for="history-team">球隊<select id="history-team"></select></label>
+      <label for="history-search">球員姓名<input id="history-search" type="search" placeholder="搜尋本隊球員" autocomplete="off"></label>
+    </div>
+    <section id="history-results" aria-busy="true" aria-live="polite"><p class="loading-message">正在載入球季…</p></section>
+    <p class="history-note history-foot">1871–2025 年名單依 <a href="https://sabr.org/lahman-database/" target="_blank" rel="noopener noreferrer">Lahman Baseball Database</a> 的出賽紀錄彙整，內含 Seamheads 的黑人聯盟記錄。原始資料 © 1996–2025 SABR，整理後的名單採 <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 3.0</a>。球員 ID 對照來自 <a href="https://github.com/chadwickbureau/register" target="_blank" rel="noopener noreferrer">Chadwick Bureau Register（ODC-By）</a>。2026 年起查詢 <a href="https://www.mlb.com/stats/" target="_blank" rel="noopener noreferrer">MLB 官方出賽資料</a>。</p>
+  </div>
+</main>
+</body>
+</html>
