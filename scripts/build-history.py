@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a compact appearance archive from Lahman CSVs and the Chadwick Register.
+"""Build the appearance archive and optionally the historical standings archive.
 
 Usage: python3 scripts/build-history.py LAHMAN_CSV_DIR REGISTER_DATA_DIR
 Lahman Baseball Database © 1996–2025 SABR: https://sabr.org/lahman-database/
@@ -21,6 +21,17 @@ LEAGUES = {
     "EWL": (1932, 1932), "NSL": (1932, 1932), "NN2": (1933, 1948), "NAL": (1937, 1948),
 }
 POSITIONS = ["—", "P", "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "OF", "DH", "PH", "PR"]
+# These series aren't in Lahman's SeriesPost. Results are documented by
+# Baseball-Reference and the 1900 cup is also in Retrosheet's postseason data.
+# https://www.baseball-reference.com/bullpen/Temple_Cup
+# https://www.baseball-reference.com/bullpen/Chronicle-Telegraph_Cup
+HISTORICAL_CUPS = [
+    (1894, "TEMPLE", "NY1", "BLN", 4, 0),
+    (1895, "TEMPLE", "CL4", "BLN", 4, 1),
+    (1896, "TEMPLE", "BLN", "CL4", 4, 0),
+    (1897, "TEMPLE", "BLN", "BSN", 4, 1),
+    (1900, "CUP", "BRO", "PIT", 3, 1),
+]
 
 
 def rows(path):
@@ -118,19 +129,64 @@ def build(source, register):
     return {"through": 2025, "positions": POSITIONS, "players": archive_people, "seasons": years}
 
 
+def build_standings(source):
+    teams = collect_teams(source)
+    standings = defaultdict(list)
+    series = defaultdict(list)
+    for row in rows(source / "Teams.csv"):
+        key = team_key(row)
+        if key not in teams:
+            continue
+        code, name, league, _, _ = teams[key]
+        rank = count(row["Rank"]) or None
+        standings[key[0]].append([code, name, league, row["divID"], rank,
+                                  int(row["W"]), int(row["L"]), row["LgWin"] == "Y"])
+
+    for row in rows(source / "SeriesPost.csv"):
+        kind = row["round"]
+        if kind not in ("WS", "NWS", "CS"):
+            continue
+        year = int(row["yearID"])
+        winner = teams[year, row["lgIDwinner"], row["teamIDwinner"]][0]
+        loser = teams[year, row["lgIDloser"], row["teamIDloser"]][0]
+        series[year].append([kind, winner, loser, int(row["wins"]), int(row["losses"]), int(row["ties"])])
+
+    for year, kind, winner, loser, wins, losses in HISTORICAL_CUPS:
+        series[year].append([kind, teams[year, "NL", winner][0], teams[year, "NL", loser][0], wins, losses, 0])
+
+    assert sum(map(len, standings.values())) == len(teams)
+    assert set(standings) == set(range(1871, 2026))
+    assert {year for year, rounds in series.items() if year >= 1903 and any(r[0] == "WS" for r in rounds)} == (
+        set(range(1903, 2026)) - {1904, 1994}
+    )
+    finals = {year: sorted(rounds, key=lambda row: row[0] != "WS") for year, rounds in sorted(series.items())}
+    return {"through": 2025, "standings": dict(sorted(standings.items())), "series": finals}
+
+
+def write_archive(output, data):
+    payload = json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode()
+    output.write_bytes(gzip.compress(payload, mtime=0))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("lahman", type=Path)
     parser.add_argument("register", type=Path)
     parser.add_argument("--output", type=Path, default=Path("docs/history-archive.json.gz"))
+    parser.add_argument("--standings", type=Path, help="also build standings from Teams.csv and SeriesPost.csv")
     args = parser.parse_args()
     archive = build(args.lahman, args.register)
-    args.output.write_bytes(gzip.compress(json.dumps(archive, ensure_ascii=False, separators=(",", ":")).encode(), mtime=0))
+    write_archive(args.output, archive)
     people = archive["players"]
     clubs = [team for year in archive["seasons"].values() for team in year]
     print(f"{len(people):,} players · {sum(p[2] is not None for p in people):,} MLB IDs · "
           f"{len(clubs):,} team-seasons · {sum(len(t[-1]) for t in clubs):,} club-player-season rows · "
           f"{args.output.stat().st_size:,} bytes")
+    if args.standings:
+        standings = build_standings(args.lahman)
+        write_archive(args.standings, standings)
+        print(f"{len(standings['standings'])} standings seasons · "
+              f"{sum(map(len, standings['series'].values()))} postseason finals · {args.standings.stat().st_size:,} bytes")
 
 
 if __name__ == "__main__":
