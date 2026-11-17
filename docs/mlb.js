@@ -292,6 +292,30 @@ async function fetchSeasonStats(id, scope, stats = "yearByYear") {
   return results.flat();
 }
 
+const PLAYER_SPLIT_CODES = ["vl", "vr", "h", "a", ...Array.from({ length: 12 }, (_, index) => String(index + 1))];
+
+async function fetchPlayerSplits(id, season, group, scope) {
+  const gameType = scope === "postseason" ? "P" : "R";
+  const payload = await requestJson(apiUrl(`/people/${id}/stats`, {
+    stats: "statSplits", group, season, sportIds: 1, gameType, sitCodes: PLAYER_SPLIT_CODES.join(","),
+  }));
+  if (!Array.isArray(payload.stats)) throw new Error("MLB did not return player splits");
+  return payload.stats
+    .filter(section => section.group?.displayName === group && section.type?.displayName === "statSplits")
+    .flatMap(section => section.splits ?? [])
+    .filter(row => row.season === season && row.gameType === gameType && row.sport?.id === 1
+      && row.stat && PLAYER_SPLIT_CODES.includes(row.split?.code));
+}
+
+async function fetchPitchArsenal(id, season, scope) {
+  const payload = await requestJson(apiUrl(`/people/${id}/stats`, {
+    stats: "pitchArsenal", group: "pitching", season, sportId: 1, gameType: scope === "postseason" ? "P" : "R",
+  }));
+  if (!Array.isArray(payload.stats)) throw new Error("MLB did not return pitch arsenal");
+  return payload.stats.filter(section => section.type?.displayName === "pitchArsenal")
+    .flatMap(section => section.splits ?? []).map(row => row.stat);
+}
+
 const CSV_PLAYER_FIELDS = [
   "id", "name", "jersey", "position", "positionName", "positionZh", "bats", "throws",
   "age", "birthDate", "birthCity", "birthRegion", "birthCountry", "height", "heightCm",
@@ -327,4 +351,4 @@ function installPhotoFallback() {
   }, true);
 }
 
-export { countryName, escape, fetchLiveRoster, fetchMinorRoster, fetchPerson, fetchSeasonStats, fetchSnapshot, fetchTransactions, fetchTransactions as fetchTeamTransactions, handedness, installPhotoFallback, mlbCalendarDate, normalizePerson, readLastRoster, rememberRoster, rosterCsv, taipeiTime, teamLogo, transactionDateRange };
+export { countryName, escape, fetchLiveRoster, fetchMinorRoster, fetchPerson, fetchPitchArsenal, fetchPlayerSplits, fetchSeasonStats, fetchSnapshot, fetchTransactions, fetchTransactions as fetchTeamTransactions, handedness, installPhotoFallback, mlbCalendarDate, normalizePerson, readLastRoster, rememberRoster, rosterCsv, taipeiTime, teamLogo, transactionDateRange };

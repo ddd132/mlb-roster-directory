@@ -39,19 +39,20 @@ const ADVANCED = {
 const bundleRequests = new Map();
 const countFormat = new Intl.NumberFormat("zh-TW");
 
+export async function loadStatArchive(path) {
+  const response = await fetch(path, { signal: AbortSignal.timeout(20_000) });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  if (!path.split("?")[0].endsWith(".gz")) return response.json();
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes[0] !== 0x1f || bytes[1] !== 0x8b) return JSON.parse(new TextDecoder().decode(bytes));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return new Response(stream).json();
+}
+
 function loadBundle(part) {
   if (!bundleRequests.has(part)) {
-    const historyBundle = part === "history";
-    const path = historyBundle ? "percentile-history.json.gz" : "percentile-current.json";
-    bundleRequests.set(part, fetch(`data/${path}?v=1`, { signal: AbortSignal.timeout(20_000) })
-      .then(async response => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        if (!historyBundle) return response.json();
-        const bytes = new Uint8Array(await response.arrayBuffer());
-        if (bytes[0] !== 0x1f || bytes[1] !== 0x8b) return JSON.parse(new TextDecoder().decode(bytes));
-        const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
-        return new Response(stream).json();
-      })
+    const path = part === "history" ? "percentile-history.json.gz" : "percentile-current.json";
+    bundleRequests.set(part, loadStatArchive(`data/${path}?v=1`)
       .then(data => {
         if (!data?.seasons || !data.capturedAt) throw new Error("Invalid percentile bundle");
         return data;
@@ -143,14 +144,9 @@ function sourceDetails(role, year, board, capturedAt) {
   </details>`;
 }
 
-function showCharts(panel, group, year, board, playerId, capturedAt) {
-  const row = board?.players[playerId];
-  if (!row) {
-    panel.innerHTML = '<div class="empty-state"><strong>此球季尚無球員排名</strong><p>可以切換球季，或在基本成績查看這一年的資料。</p></div>';
-    return;
-  }
+function playerValues(board, group, row) {
   const peers = Object.values(board.players);
-  const values = new Map(board.columns.map((key, index) => {
+  return new Map(board.columns.map((key, index) => {
     const valueIndex = 2 * index + 1;
     const value = row[valueIndex];
     const rank = row[valueIndex + 1];
@@ -159,6 +155,23 @@ function showCharts(panel, group, year, board, playerId, capturedAt) {
     const reference = referencePercentile(peers, valueIndex, value, LOWER_IS_BETTER[group].has(key));
     return [key, [value, reference, isPercentile(reference)]];
   }));
+}
+
+export async function loadPlayerPercentiles(year, group, playerId) {
+  const { groups } = await loadSeason(year);
+  const board = groups?.[group];
+  const row = board?.players[playerId];
+  if (!row) return null;
+  return { values: playerValues(board, group, row), sample: row[0], minimum: board.minimum };
+}
+
+function showCharts(panel, group, year, board, playerId, capturedAt) {
+  const row = board?.players[playerId];
+  if (!row) {
+    panel.innerHTML = '<div class="empty-state"><strong>此球季尚無球員排名</strong><p>可以切換球季，或在基本成績查看這一年的資料。</p></div>';
+    return;
+  }
+  const values = playerValues(board, group, row);
   const advanced = ADVANCED[group].filter(([key]) => values.get(key)?.some(Number.isFinite));
   const sample = row[0] < board.minimum ? " · 小樣本" : "";
   const referenceNote = [...values.values()].some(([, , reference]) => reference)

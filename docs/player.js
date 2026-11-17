@@ -1,7 +1,8 @@
 import { countryName, escape, fetchPerson, fetchSeasonStats, fetchSnapshot, handedness, installPhotoFallback, normalizePerson, readLastRoster, teamLogo } from "./mlb.js";
 
 import { advancedDefinitions, loadAdvanced, seasonMetrics } from "./advanced.js";
-import { renderPercentiles } from "./percentiles.js?v=2";
+import { renderPercentiles } from "./percentiles.js?v=3";
+import { renderAbility } from "./ability.js?v=1";
 
 const byId = id => document.getElementById(id);
 const scopeButtons = byId("scope-switch");
@@ -21,7 +22,7 @@ let activeScope = "";
 let activeRows = [];
 let activePlayer;
 let identityReady;
-let statsView = ["advanced", "percentiles"].includes(params.get("view")) ? params.get("view") : "standard";
+let statsView = ["advanced", "percentiles", "ability"].includes(params.get("view")) ? params.get("view") : "standard";
 let advancedRequest;
 let advancedData;
 
@@ -229,7 +230,7 @@ function setStatsView(view) {
   if (view === "standard") url.searchParams.delete("view");
   else url.searchParams.set("view", view);
   history.replaceState(null, "", url);
-  if (view === "percentiles" && activeScope !== "regular") {
+  if ((view === "percentiles" && activeScope !== "regular") || (view === "ability" && activeScope === "minors")) {
     void selectScope("regular");
     return;
   }
@@ -240,11 +241,17 @@ function renderStats() {
   const visible = activeRows.filter(keepRow);
   const regularAdvanced = visible.filter(row => Object.hasOwn(advancedDefinitions, row.group));
   const regular = activeScope === "regular";
-  const view = regular ? statsView : "standard";
+  const ability = statsView === "ability" && activeScope !== "minors";
+  const view = regular || ability ? statsView : "standard";
   statsMode.hidden = false;
   statsMode.querySelector('[data-view="advanced"]').hidden = !regular || !regularAdvanced.length;
   for (const button of statsMode.querySelectorAll("[data-view]")) {
     button.setAttribute("aria-pressed", String(!button.hidden && button.dataset.view === view));
+  }
+  if (ability) {
+    byId("split-toggle").hidden = true;
+    renderAbility(statSections, playerId, regularAdvanced, activeScope);
+    return;
   }
   if (view === "percentiles") {
     byId("split-toggle").hidden = true;
