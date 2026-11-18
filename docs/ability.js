@@ -1,8 +1,8 @@
 import { escape, fetchPitchArsenal, fetchPlayerSplits } from "./mlb.js?v=2";
-import { loadPlayerPercentiles, loadStatArchive } from "./percentiles.js?v=3";
+import { loadPlayerPercentiles, loadStatArchive } from "./percentiles.js?v=4";
 
 const ROLES = { hitting: "打擊", pitching: "投球" };
-const AXES = {
+export const AXES = {
   hitting: [
     ["火力", "Barrel%", "SLG"], ["接觸", "Whiff%", "K%"], ["選球", "Chase%", "BB%"],
     ["打擊產出", "wRC+", "OPS"], ["跑速", "Sprint"],
@@ -82,7 +82,7 @@ function formatMetric(value, key) {
   return fixed(value, 3);
 }
 
-function axisMagnitude(value, key) {
+export function axisMagnitude(value, key) {
   if (value == null) return "—";
   if (key.endsWith("%")) return `${value.toFixed(1)}%`;
   if (key === "Sprint") return `${value.toFixed(1)} ft/s`;

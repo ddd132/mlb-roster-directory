@@ -3,8 +3,8 @@ import { contractDetail, contractState, loadTeamDetails, payrollLink, rule5State
 import { countryName, escape, fetchPerson, fetchSeasonStats, fetchSnapshot, handedness, installPhotoFallback, normalizePerson, readLastRoster, teamLogo } from "./mlb.js?v=5";
 
 import { advancedDefinitions, loadAdvanced, seasonMetrics } from "./advanced.js";
-import { renderPercentiles } from "./percentiles.js?v=3";
-import { renderAbility } from "./ability.js?v=1";
+import { renderPercentiles } from "./percentiles.js?v=4";
+import { renderAbility } from "./ability.js?v=2";
 
 const byId = id => document.getElementById(id);
 const scopeButtons = byId("scope-switch");
@@ -15,6 +15,7 @@ const params = new URLSearchParams(location.search);
 const fromMinors = params.get("from") === "minors";
 const fromDepth = params.get("from") === "depth";
 const fromContracts = params.get("from") === "contracts";
+const fromLeaders = params.get("from") === "leaders";
 const finderBack = finderReturnUrl(params);
 const playerId = Number(params.get("id"));
 const validId = /^\d{1,10}$/.test(params.get("id") ?? "") && playerId > 0;
@@ -29,7 +30,7 @@ let activePlayer;
 let activeTeam;
 let playerDetails;
 let identityReady;
-let statsView = ["advanced", "percentiles", "ability"].includes(params.get("view")) ? params.get("view") : "standard";
+let statsView = ["advanced", "percentiles", "ability", "compare"].includes(params.get("view")) ? params.get("view") : "standard";
 let advancedRequest;
 let advancedData;
 
@@ -150,7 +151,9 @@ function showIdentity(player, team, bioClub) {
 
   const backLink = byId("back-to-roster");
   const backTeam = team?.abbr ?? params.get("team");
-  if (!fromMinors && !finderBack && !fromDepth && !fromContracts) backLink.href = backTeam ? `./?team=${encodeURIComponent(backTeam)}#roster` : "./#roster";
+  if (!fromMinors && !finderBack && !fromDepth && !fromContracts && !fromLeaders) {
+    backLink.href = backTeam ? `./?team=${encodeURIComponent(backTeam)}#roster` : "./#roster";
+  }
 
   const place = [player.birthCity, player.birthRegion, countryName(player.birthCountry)].filter(Boolean).join(" · ");
   const bio = [
@@ -279,7 +282,7 @@ function setStatsView(view) {
   if (view === "standard") url.searchParams.delete("view");
   else url.searchParams.set("view", view);
   history.replaceState(null, "", url);
-  if ((view === "percentiles" && activeScope !== "regular") || (view === "ability" && activeScope === "minors")) {
+  if ((view === "percentiles" && activeScope !== "regular") || (["ability", "compare"].includes(view) && activeScope === "minors")) {
     void selectScope("regular");
     return;
   }
@@ -291,11 +294,29 @@ function renderStats() {
   const regularAdvanced = visible.filter(row => Object.hasOwn(advancedDefinitions, row.group));
   const regular = activeScope === "regular";
   const ability = statsView === "ability" && activeScope !== "minors";
-  const view = regular || ability ? statsView : "standard";
+  const compare = statsView === "compare" && activeScope !== "minors";
+  const view = regular || ability || compare ? statsView : "standard";
   statsMode.hidden = false;
   statsMode.querySelector('[data-view="advanced"]').hidden = !regular || !regularAdvanced.length;
   for (const button of statsMode.querySelectorAll("[data-view]")) {
     button.setAttribute("aria-pressed", String(!button.hidden && button.dataset.view === view));
+  }
+  if (compare) {
+    byId("split-toggle").hidden = true;
+    statSections.innerHTML = '<p class="loading-message" role="status">正在準備球員比較…</p>';
+    const loading = statSections.firstElementChild;
+    void import("./compare.js?v=1").then(({ renderComparison }) => {
+      if (!loading.isConnected) return;
+      renderComparison(statSections, {
+        id: playerId, name: activePlayer.name, rows: activeRows, scope: activeScope,
+        preferredRole: activePlayer.positionGroup === "pitcher" ? "pitching" : "hitting",
+      });
+    }).catch(error => {
+      if (!loading.isConnected) return;
+      console.warn("Could not open player comparison", error);
+      statSections.innerHTML = '<div class="empty-state"><strong>球員比較暫時無法開啟</strong><button type="button" class="retry-button" data-retry>重新載入</button></div>';
+    });
+    return;
   }
   if (ability) {
     byId("split-toggle").hidden = true;
@@ -409,7 +430,16 @@ function noPlayer() {
 
 async function start() {
   installPhotoFallback();
-  if (finderBack) {
+  if (fromLeaders) {
+    const origin = new URLSearchParams(params.get("leader"));
+    const back = new URLSearchParams();
+    for (const key of ["group", "season", "game", "league", "pool", "stat", "sort", "page", "q"]) {
+      if (origin.has(key)) back.set(key, origin.get(key));
+    }
+    const link = byId("back-to-roster");
+    link.href = `leaders.html?${back}`;
+    link.textContent = "回排行榜";
+  } else if (finderBack) {
     const back = byId("back-to-roster");
     back.href = finderBack;
     const origin = new URLSearchParams(params.get("finder"));
@@ -451,7 +481,7 @@ async function start() {
   const knownTeam = snapshot?.teams.find(team => team.players.some(player => player.id === playerId));
   const knownPlayer = knownTeam?.players.find(player => player.id === playerId);
   if (knownPlayer) showIdentity(knownPlayer, knownTeam);
-  const requestedScope = params.get("scope");
+  const requestedScope = statsView === "compare" && params.get("scope") !== "postseason" ? "regular" : params.get("scope");
   const initialScope = Object.hasOwn(labels, requestedScope) ? requestedScope
     : knownPlayer && !knownPlayer.debutDate ? "minors" : "regular";
   identityReady = personRequest.then(person => {

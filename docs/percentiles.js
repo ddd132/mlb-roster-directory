@@ -65,7 +65,7 @@ function loadBundle(part) {
   return bundleRequests.get(part);
 }
 
-async function loadSeason(year) {
+export async function loadSeason(year) {
   const current = await loadBundle("current");
   if (current.seasons[year]) return { groups: current.seasons[year], capturedAt: current.capturedAt };
   if (Number(year) > Math.max(...Object.keys(current.seasons).map(Number))) return {};
@@ -157,12 +157,15 @@ function playerValues(board, group, row) {
   }));
 }
 
-export async function loadPlayerPercentiles(year, group, playerId) {
-  const { groups } = await loadSeason(year);
-  const board = groups?.[group];
+export function percentileProfile(board, group, playerId) {
   const row = board?.players[playerId];
   if (!row) return null;
   return { values: playerValues(board, group, row), sample: row[0], minimum: board.minimum };
+}
+
+export async function loadPlayerPercentiles(year, group, playerId) {
+  const { groups } = await loadSeason(year);
+  return percentileProfile(groups?.[group], group, playerId);
 }
 
 function showCharts(panel, group, year, board, playerId, capturedAt) {

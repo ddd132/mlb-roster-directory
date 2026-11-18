@@ -66,7 +66,7 @@ const state = {
   league: Object.hasOwn(MLB_LEAGUES, params.get("league")) ? params.get("league") : "MLB",
   pool: ["all", "qualified"].includes(params.get("pool")) ? params.get("pool") : "auto",
   sort: ["asc", "desc"].includes(params.get("sort")) ? params.get("sort") : null,
-  page: 1,
+  page: Math.max(1, Number.parseInt(params.get("page"), 10) || 1),
 };
 
 const cache = new Map();
@@ -203,6 +203,15 @@ function playerHref(row) {
   return `player.html?${escape(params.toString())}`;
 }
 
+function compareHref(row, returnFilters) {
+  const query = new URLSearchParams({
+    id: row.player.id, view: "compare", compareYear: state.season, compareRole: state.group,
+    from: "leaders", leader: returnFilters,
+  });
+  if (state.game === "P") query.set("scope", "postseason");
+  return `player.html?${escape(query.toString())}#season-stats`;
+}
+
 function renderRows() {
   if (!currentBoard) return;
   const { metric, ranked, pool } = currentBoard;
@@ -229,12 +238,14 @@ function renderRows() {
     element("results").innerHTML = `<div class="empty-state"><strong>${search ? "找不到符合的球員" : "目前沒有可排名的數據"}</strong><p>${search ? "請試試其他球員英文姓名。" : "可切換球季、項目或球員範圍。"}</p></div>`;
     return;
   }
+  const returnFilters = new URLSearchParams({ ...state, q: element("search").value.trim() }).toString();
   const rows = visible.map(({ row, value, rank }) => {
     const team = club(row);
     const position = row.position?.abbreviation;
     return `<tr><td class="leader-rank"><strong${rank <= 3 ? ' class="leader-top-rank"' : ""}>${rank}</strong></td>
       <th class="leader-player" scope="row"><a href="${playerHref(row)}">${escape(row.player.fullName)}</a>
-        <small><span class="leader-mobile-club">${escape(team.label)}${position ? " · " : ""}</span>${escape(position)}</small></th>
+        <small><span class="leader-mobile-club">${escape(team.label)}${position ? " · " : ""}</span>${escape(position)}</small>
+        <a class="compare-launch leader-compare" href="${compareHref(row, returnFilters)}" aria-label="比較 ${escape(row.player.fullName)}">比較</a></th>
       <td class="leader-club"><span class="leader-abbr" title="${escape(team.name)}">${escape(team.label)}</span></td>
       <td class="leader-value leader-number">${display(value, format)}</td>
       ${showSample ? `<td class="leader-number">${display(numeric(row.stat[sampleField]), sampleFormat)}</td>` : ""}</tr>`;
@@ -303,6 +314,7 @@ async function start() {
   if (!descriptor()) state.stat = DEFAULT_METRIC[state.group];
   state.sort ??= defaultSort();
   element("season").innerHTML = seasons.map(year => `<option value="${year}">${year}</option>`).join("");
+  element("search").value = params.get("q") ?? "";
   for (const key of ["season", "game", "league", "pool", "sort"]) {
     const select = element(key);
     select.value = state[key];

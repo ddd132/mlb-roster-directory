@@ -190,7 +190,13 @@ function jerseyMarkup(player) {
 
 function playerCards(players, team, eager = false) {
   return `<div class="player-grid" style="--team: ${escape(team.color)}">
-    ${players.map((player, index) => `<a class="player-card" data-player="${escape(player.id)}" href="player.html?id=${encodeURIComponent(player.id)}&amp;team=${escape(team.abbr)}">
+    ${players.map((player, index) => {
+      const compare = new URLSearchParams({
+        id: player.id, team: team.abbr, view: "compare", compareYear: snapshot.season,
+        compareRole: player.positionGroup === "pitcher" ? "pitching" : "hitting",
+      });
+      return `<article class="player-card-slot">
+      <a class="player-card" data-player="${escape(player.id)}" href="player.html?id=${encodeURIComponent(player.id)}&amp;team=${escape(team.abbr)}">
       <div class="player-art">
         ${jerseyMarkup(player)}
         ${photoMarkup(player, eager && index < 8)}
@@ -204,7 +210,11 @@ function playerCards(players, team, eager = false) {
         </div>
         ${icon("chevron")}
       </div>
-    </a>`).join("")}
+      </a>
+      <a class="compare-launch roster-compare" data-compare="${escape(player.id)}" aria-label="比較 ${escape(player.name)}"
+        href="player.html?${escape(compare.toString())}#season-stats">比較</a>
+    </article>`;
+    }).join("")}
   </div>`;
 }
 
@@ -490,14 +500,14 @@ async function refreshRoster() {
     snapshot = updated;
     for (const team of updated.teams) updateRosterRights(teamDetails, team, updated.rosterDate);
     if (changed) {
-      const focusedId = document.activeElement?.dataset.player;
+      const focus = focusedCard();
       const focusedTeam = document.activeElement?.dataset.team;
       setRosterIndex();
       state.team = teamMap.get(state.team.id);
       renderTeamNavigation();
       renderHeading();
       renderView();
-      if (focusedId) resultList.querySelector(`[data-player="${focusedId}"]`)?.focus({ preventScroll: true });
+      if (focus) resultList.querySelector(focus)?.focus({ preventScroll: true });
       if (focusedTeam) divisionList.querySelector(`[data-team="${focusedTeam}"]`)?.focus({ preventScroll: true });
     }
     renderRosterStatus("fresh", "MLB 名單已查詢");
@@ -518,6 +528,12 @@ function refreshDirectory() {
   }
 }
 
+function focusedCard() {
+  const { player, compare } = document.activeElement?.dataset ?? {};
+  if (player) return `[data-player="${player}"]`;
+  return compare ? `[data-compare="${compare}"]` : "";
+}
+
 async function refreshTeamDetails() {
   detailsLoading = true;
   try {
@@ -527,9 +543,9 @@ async function refreshTeamDetails() {
     console.warn("Could not load contract and position data", error);
   } finally {
     detailsLoading = false;
-    const focused = document.activeElement?.dataset.player;
+    const focus = focusedCard();
     renderView();
-    if (focused) resultList.querySelector(`[data-player="${focused}"]`)?.focus({ preventScroll: true });
+    if (focus) resultList.querySelector(focus)?.focus({ preventScroll: true });
   }
 }
 
