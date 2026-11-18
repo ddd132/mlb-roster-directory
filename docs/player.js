@@ -3,8 +3,8 @@ import { contractDetail, contractState, loadTeamDetails, payrollLink, rule5State
 import { countryName, escape, fetchPerson, fetchSeasonStats, fetchSnapshot, handedness, installPhotoFallback, normalizePerson, readLastRoster, teamLogo } from "./mlb.js?v=5";
 
 import { advancedDefinitions, loadAdvanced, seasonMetrics } from "./advanced.js";
-import { renderPercentiles } from "./percentiles.js?v=4";
-import { renderAbility } from "./ability.js?v=2";
+import { renderPercentiles } from "./percentiles.js?v=5";
+import { renderAbility } from "./ability.js?v=3";
 
 const byId = id => document.getElementById(id);
 const scopeButtons = byId("scope-switch");
@@ -30,7 +30,8 @@ let activePlayer;
 let activeTeam;
 let playerDetails;
 let identityReady;
-let statsView = ["advanced", "percentiles", "ability", "compare"].includes(params.get("view")) ? params.get("view") : "standard";
+let statsView = ["advanced", "percentiles", "ability", "compare", "trend"].includes(params.get("view")) ? params.get("view") : "standard";
+let focusTrend = false;
 let advancedRequest;
 let advancedData;
 
@@ -225,8 +226,12 @@ function renderTable(rows, group, isMinor, advanced) {
   const definition = advanced ? advancedDefinitions[group] : definitions[group];
   const fielding = group === "fielding";
   const seasons = groupedSeasons(rows);
-  const header = definition.columns.map(([key, , description, emphasis]) =>
-    `<th scope="col" title="${description}"${emphasis ? ' class="stat-key"' : ""}>${key}</th>`).join("");
+  const header = definition.columns.map(([key, , description, emphasis]) => {
+    const control = fielding || isMinor ? key : `<button type="button" class="career-trigger career-column-trigger"
+      aria-label="${escape(key)} 生涯趨勢" title="${escape(description)}。點選查看生涯趨勢"
+      data-trend-key="${escape(key.replace(/^被 /, ""))}" data-trend-role="${group}">${key}</button>`;
+    return `<th scope="col" title="${escape(description)}"${emphasis ? ' class="stat-key"' : ""}>${control}</th>`;
+  }).join("");
   const dataRows = seasons.map(([year, season]) => {
     const lines = advanced ? advancedSeasonRow(season) : displayRows(season);
     return `<tbody>${lines.map(({ row, details, split }, index) => {
@@ -276,13 +281,21 @@ function currentViewIsAdvanced() {
   return activeScope === "regular" && statsView === "advanced";
 }
 
-function setStatsView(view) {
+function setStatsView(view, trendControl) {
   statsView = view;
   const url = new URL(location.href);
   if (view === "standard") url.searchParams.delete("view");
   else url.searchParams.set("view", view);
+  if (trendControl) {
+    const { trendKey, trendRole, trendSeason } = trendControl.dataset;
+    url.searchParams.set("trendMetric", trendKey);
+    url.searchParams.set("trendRole", trendRole);
+    if (trendSeason) url.searchParams.set("trendYear", trendSeason);
+    else url.searchParams.delete("trendYear");
+    focusTrend = true;
+  }
   history.replaceState(null, "", url);
-  if ((view === "percentiles" && activeScope !== "regular") || (["ability", "compare"].includes(view) && activeScope === "minors")) {
+  if ((view === "percentiles" && activeScope !== "regular") || (["ability", "compare", "trend"].includes(view) && activeScope === "minors")) {
     void selectScope("regular");
     return;
   }
@@ -295,11 +308,32 @@ function renderStats() {
   const regular = activeScope === "regular";
   const ability = statsView === "ability" && activeScope !== "minors";
   const compare = statsView === "compare" && activeScope !== "minors";
-  const view = regular || ability || compare ? statsView : "standard";
+  const trend = statsView === "trend" && activeScope !== "minors";
+  const view = regular || ability || compare || trend ? statsView : "standard";
   statsMode.hidden = false;
   statsMode.querySelector('[data-view="advanced"]').hidden = !regular || !regularAdvanced.length;
+  statsMode.querySelector('[data-view="trend"]').hidden = activeScope === "minors";
   for (const button of statsMode.querySelectorAll("[data-view]")) {
     button.setAttribute("aria-pressed", String(!button.hidden && button.dataset.view === view));
+  }
+  if (trend) {
+    byId("split-toggle").hidden = true;
+    statSections.innerHTML = '<p class="loading-message" role="status">正在準備生涯趨勢…</p>';
+    const loading = statSections.firstElementChild;
+    const focus = focusTrend;
+    focusTrend = false;
+    void import("./career-trend.js?v=1").then(({ renderCareerTrend }) => {
+      if (!loading.isConnected) return;
+      renderCareerTrend(statSections, {
+        id: playerId, name: activePlayer.name, rows: activeRows, scope: activeScope, definitions, totalRow, focus,
+        preferredRole: activePlayer.positionGroup === "pitcher" ? "pitching" : "hitting",
+      });
+    }).catch(error => {
+      if (!loading.isConnected) return;
+      console.warn("Could not open career trend", error);
+      statSections.innerHTML = '<div class="empty-state"><strong>生涯趨勢暫時無法開啟</strong><button type="button" class="retry-button" data-retry>重新載入</button></div>';
+    });
+    return;
   }
   if (compare) {
     byId("split-toggle").hidden = true;
@@ -347,7 +381,8 @@ function renderStats() {
   const isMinor = activeScope === "minors";
   const tables = advanced ? advancedDefinitions : definitions;
   const keys = Object.keys(tables).filter(group => groups.has(group));
-  const intro = isMinor ? "小聯盟成績按球季及層級列出，可橫向捲動表格。" : "橫向捲動表格可查看其餘欄位。";
+  const intro = isMinor ? "小聯盟成績按球季及層級列出，可橫向捲動表格。"
+    : "點打擊或投球欄名可看生涯趨勢。可橫向捲動表格查看其他指標。";
   const links = keys.length > 1 ? `<nav class="stat-jumps" aria-label="跳到成績類別">${keys.map(group =>
     `<a href="#stats-${group}">${tables[group].label}</a>`,
   ).join("")}</nav>` : "";
@@ -411,6 +446,8 @@ function connectEvents() {
       void selectScope(scope);
     } else if (button?.hasAttribute("data-retry")) {
       void selectScope(activeScope);
+    } else if (button?.hasAttribute("data-trend-key")) {
+      setStatsView("trend", button);
     }
   });
   statsMode.addEventListener("click", event => {
@@ -481,7 +518,7 @@ async function start() {
   const knownTeam = snapshot?.teams.find(team => team.players.some(player => player.id === playerId));
   const knownPlayer = knownTeam?.players.find(player => player.id === playerId);
   if (knownPlayer) showIdentity(knownPlayer, knownTeam);
-  const requestedScope = statsView === "compare" && params.get("scope") !== "postseason" ? "regular" : params.get("scope");
+  const requestedScope = ["compare", "trend"].includes(statsView) && params.get("scope") !== "postseason" ? "regular" : params.get("scope");
   const initialScope = Object.hasOwn(labels, requestedScope) ? requestedScope
     : knownPlayer && !knownPlayer.debutDate ? "minors" : "regular";
   identityReady = personRequest.then(person => {

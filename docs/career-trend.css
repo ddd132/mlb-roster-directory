@@ -1,0 +1,141 @@
+.career-trigger {
+  border: 0;
+  border-radius: 4px;
+  padding: 2px 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.career-trigger strong, .career-column-trigger {
+  text-decoration: underline;
+  text-decoration-color: #487699;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.career-trigger:hover { color: var(--blue); }
+.stats-table thead .career-column-trigger { min-height: 30px; text-decoration-color: #a9c0d5; }
+.stats-table thead .career-column-trigger:hover { color: #b8defa; }
+.pr-metric.career-trigger { min-height: 36px; align-content: center; }
+
+.career-trend {
+  --career-line: #175c93;
+  --career-accent: #aa3d26;
+  padding: clamp(12px, 3vw, 24px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  scroll-margin-top: 14px;
+}
+.career-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 22px;
+  margin-bottom: 16px;
+}
+.career-heading h3 { margin: 0; font-size: 23px; letter-spacing: -.02em; }
+.career-heading p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+.career-controls {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: end;
+}
+.career-controls label { display: grid; gap: 4px; min-width: 0; color: var(--muted); font-size: 12px; font-weight: 720; }
+.career-controls select {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 7px 8px;
+  border: 1px solid #cbd7e2;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+.career-results {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, .38fr);
+  gap: 14px;
+  align-items: start;
+}
+.career-chart {
+  min-width: 0;
+  padding: 12px 10px 10px;
+  border: 1px solid #dce5ee;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+.career-chart h4 { margin: 0 3px 7px; font-size: 16px; }
+.career-chart h4 span { margin-inline-start: 3px; color: var(--muted); font-size: 12px; font-weight: 650; }
+.career-selected {
+  margin: 0 2px 8px;
+  padding: 8px 10px;
+  border: 1px solid #d9e5ef;
+  border-radius: 7px;
+  background: #edf4fb;
+}
+.career-selected-main { display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 11px; font-size: 13px; }
+.career-selected-main b { color: var(--career-line); font-size: 21px; font-variant-numeric: tabular-nums; }
+.career-selected-main span, .career-selected p { color: var(--muted); }
+.career-selected p { margin: 1px 0 0; font-size: 12px; }
+.career-plot { display: block; width: 100%; height: clamp(208px, 35vw, 285px); overflow: visible; }
+.career-plot text { fill: var(--muted); font-size: 11px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.career-gridline { stroke: #dce5ef; }
+.career-guide { stroke: #a4b9ca; stroke-dasharray: 4 4; }
+.career-line { fill: none; stroke: var(--career-line); stroke-width: 2.7; stroke-linecap: round; stroke-linejoin: round; }
+.career-dot { fill: var(--career-line); stroke: #fff; stroke-width: 1.4; }
+.career-active-dot { fill: var(--career-accent); stroke-width: 1.7; }
+.career-hit { fill: transparent; pointer-events: all; cursor: pointer; }
+.career-note, .career-message { margin: 4px 3px 0; color: var(--muted); font-size: 12px; }
+.career-note a { white-space: nowrap; text-underline-offset: 2px; }
+.career-message { margin-block: 12px; }
+.career-table-wrap {
+  min-width: 0;
+  max-height: 414px;
+  overflow: auto;
+  border: 1px solid #dce5ee;
+  border-radius: 9px;
+}
+.career-table { width: 100%; border-spacing: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+.career-table :is(th, td) { white-space: nowrap; text-align: end; padding: 0 9px; }
+.career-table :is(th, td):first-child { text-align: start; }
+.career-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-block: 9px;
+  background: #edf1f6;
+  color: var(--muted);
+  font-size: 11px;
+}
+.career-table tbody :is(th, td) { border-top: 1px solid #edf1f6; }
+.career-table tr:has(button[aria-pressed="true"]) { background: #edf4fb; color: #154777; }
+.career-table button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--blue);
+  font: inherit;
+  font-weight: 750;
+  text-align: start;
+  cursor: pointer;
+}
+.career-table button:hover { text-decoration: underline; }
+
+@media (max-width: 680px) {
+  .career-controls { flex: 1 1 100%; flex-wrap: nowrap; }
+  .career-controls label:has([data-career-metric]) { flex: 1; }
+  .career-controls select { width: 100%; }
+  .career-results { grid-template-columns: minmax(0, 1fr); gap: 11px; }
+  .career-table-wrap { max-height: none; }
+}

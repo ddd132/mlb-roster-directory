@@ -19,7 +19,7 @@ const TRADITIONAL = {
     ["IP", "投球局數"], ["SO", "三振"], ["W", "勝投"], ["SV", "救援成功"], ["HLD", "中繼成功"],
   ],
 };
-const ADVANCED = {
+export const ADVANCED = {
   hitting: [
     ["wRC+", "加權得分創造指數"], ["xwOBA", "預期加權上壘率", 3], ["xBA", "預期打擊率", 3], ["xSLG", "預期長打率", 3],
     ["BABIP", "場內安打率", 3], ["EV", "平均擊球初速", 1, " mph"], ["Barrel%", "紮實擊球率", 1, "%"],
@@ -99,7 +99,7 @@ function referencePercentile(peers, valueIndex, value, lowerIsBetter) {
   return sample ? Math.round(100 * (behind + tied / 2) / sample) : null;
 }
 
-function metricRow(definition, values) {
+function metricRow(definition, values, group, year) {
   const [key, name, digits, unit] = definition;
   const [value, rank, reference] = values.get(key) ?? [];
   const hasRank = isPercentile(rank);
@@ -109,7 +109,8 @@ function metricRow(definition, values) {
   const marker = reference ? '<sup aria-hidden="true">＊</sup>' : "";
   const rankLabel = reference ? "參考 PR " : "PR ";
   return `<li class="pr-row" data-metric="${key}">
-    <span class="pr-metric"><strong>${key}${marker}</strong><small>${name}</small></span>
+    <button type="button" class="pr-metric career-trigger" data-trend-key="${key}" data-trend-role="${group}" data-trend-season="${year}"
+      aria-label="${name} ${key} 生涯趨勢"><strong>${key}${marker}</strong><small>${name}</small></button>
     <span class="pr-track"${properties}>
       ${hasRank ? `<span class="pr-fill" aria-hidden="true"></span><span class="pr-badge"><span class="visually-hidden">${rankLabel}</span>${rank}</span>` :
         '<span class="pr-unranked"><span aria-hidden="true">—</span><span class="visually-hidden">無百分位</span></span>'}
@@ -118,12 +119,12 @@ function metricRow(definition, values) {
   </li>`;
 }
 
-function chart(id, title, definitions, values) {
+function chart(id, title, definitions, values, group, year) {
   return `<section class="pr-card" aria-labelledby="${id}">
     <h4 id="${id}">${title}</h4>
     <div class="pr-columns pr-key" aria-hidden="true"><span>指標</span>
       <span class="pr-ticks"><span>PR 0</span><span>50</span><span>100</span></span><span>實際數值</span></div>
-    <ul class="pr-rows" role="list">${definitions.map(definition => metricRow(definition, values)).join("")}</ul>
+    <ul class="pr-rows" role="list">${definitions.map(definition => metricRow(definition, values, group, year)).join("")}</ul>
   </section>`;
 }
 
@@ -179,11 +180,11 @@ function showCharts(panel, group, year, board, playerId, capturedAt) {
   const sample = row[0] < board.minimum ? " · 小樣本" : "";
   const referenceNote = [...values.values()].some(([, , reference]) => reference)
     ? "＊ 為本站補算的參考 PR。" : "";
-  panel.innerHTML = `<p class="pr-sample">${countFormat.format(row[0])} ${SAMPLE_LABEL[group]}${sample} · PR 越高代表該項表現越靠前，50 居中。<span>${referenceNote}— 表示缺少可用數值或比較資料。</span></p>
+  panel.innerHTML = `<p class="pr-sample">${countFormat.format(row[0])} ${SAMPLE_LABEL[group]}${sample} · PR 越高代表該項表現越靠前，50 居中。<span>${referenceNote}— 表示缺少可用數值或比較資料。點指標可看生涯趨勢。</span></p>
     <nav class="stat-jumps pr-jumps" aria-label="跳到百分位類別"><a href="#pr-advanced">進階數據</a><a href="#pr-traditional">傳統數據</a></nav>
     <div class="pr-grid">
-      ${chart("pr-advanced", "進階數據", advanced, values)}
-      ${chart("pr-traditional", "傳統數據", TRADITIONAL[group], values)}
+      ${chart("pr-advanced", "進階數據", advanced, values, group, year)}
+      ${chart("pr-traditional", "傳統數據", TRADITIONAL[group], values, group, year)}
     </div>
     ${sourceDetails(group, year, board, capturedAt)}`;
 }

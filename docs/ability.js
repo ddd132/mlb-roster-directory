@@ -1,5 +1,5 @@
 import { escape, fetchPitchArsenal, fetchPlayerSplits } from "./mlb.js?v=2";
-import { loadPlayerPercentiles, loadStatArchive } from "./percentiles.js?v=4";
+import { loadPlayerPercentiles, loadStatArchive } from "./percentiles.js?v=5";
 
 const ROLES = { hitting: "打擊", pitching: "投球" };
 export const AXES = {
@@ -132,7 +132,7 @@ function radarMarkup(axes) {
     ${edges}${dots}${labels}</svg>`;
 }
 
-function showRadar(panel, profile, role) {
+function showRadar(panel, profile, role, year) {
   const axes = radarAxes(profile, role);
   if (!axes.some(axis => axis.rank != null)) {
     panel.innerHTML = '<p class="ab-message">這個球季尚無可用的同季百分位。</p>';
@@ -141,10 +141,12 @@ function showRadar(panel, profile, role) {
   const sample = profile.sample < profile.minimum ? " · 小樣本" : "";
   const hasReference = axes.some(axis => axis.reference);
   panel.innerHTML = `<div class="ab-radar-layout">${radarMarkup(axes)}
-    <ul class="ab-axis-list">${axes.map(axis => `<li><span><strong>${axis.label}</strong><small>${axis.key}</small></span>
+    <ul class="ab-axis-list">${axes.map(axis => `<li><button type="button" class="career-trigger" data-trend-key="${axis.key}"
+      data-trend-role="${role}" data-trend-season="${year}" aria-label="${axis.label} ${axis.key} 生涯趨勢">
+      <strong>${axis.label}</strong><small>${axis.key}</small></button>
       <span><strong>${axis.rank == null ? "—" : "PR " + axis.rank + (axis.reference ? "＊" : "")}</strong>
       <small>${axisMagnitude(axis.value, axis.key)}</small></span></li>`).join("")}</ul></div>
-    <p class="ab-note">${numberFormat.format(profile.sample)} ${role === "hitting" ? "打席" : "對戰打席"}${sample} · 同季 MLB 例行賽百分位，越外側越靠前${hasReference ? " · ＊為參考 PR" : ""}</p>`;
+    <p class="ab-note">${numberFormat.format(profile.sample)} ${role === "hitting" ? "打席" : "對戰打席"}${sample} · 同季 MLB 例行賽百分位，越外側越靠前${hasReference ? " · ＊為參考 PR" : ""}。點指標可看生涯趨勢。</p>`;
 }
 
 function monthPoints(data) {
@@ -281,7 +283,7 @@ function showSplits(panel, rows, role, wholeSeason) {
   selectGroup("month");
 }
 
-function showPerformance(panel, stats, role, profile, woba) {
+function showPerformance(panel, stats, role, profile, woba, year) {
   const baseline = role === "hitting" ? ["wOBA", woba?.[0]] : ["ERA", numeric(stats?.era)];
   const expectedKey = role === "hitting" ? "xwOBA" : "xERA";
   const expected = role === "hitting" ? woba?.[1] : null;
@@ -291,7 +293,9 @@ function showPerformance(panel, stats, role, profile, woba) {
   const max = Math.max(0.01, ...values.map(([, value]) => value)) * 1.08;
   panel.hidden = false;
   panel.innerHTML = `<h3>球季表現</h3><div class="ab-bars">${values.map(([label, value]) =>
-    `<div class="ab-split-bar"><strong>${label}</strong><div class="ab-bar-track" aria-hidden="true">
+    `<div class="ab-split-bar"><button type="button" class="career-trigger" data-trend-key="${label}"
+      data-trend-role="${role}" data-trend-season="${year}" aria-label="${label} 生涯趨勢"><strong>${label}</strong></button>
+      <div class="ab-bar-track" aria-hidden="true">
     <div style="--ab-bar:${100 * value / max}%"></div></div><strong>${formatMetric(value, role === "hitting" ? "woba" : "era")}</strong></div>`
   ).join("")}</div><p class="ab-note">${sampleLabel(stats, role)}${values.some(([label]) => label === expectedKey) ? " · x 為預期數值" : ""}</p>`;
 }
@@ -413,7 +417,7 @@ export function renderAbility(container, playerId, rows, scope) {
   if (regular) {
     const profile = loadPlayerPercentiles(year, role, playerId);
     profile.then(data => {
-      if (view.isConnected) showRadar(radar, data, role);
+      if (view.isConnected) showRadar(radar, data, role, year);
     }).catch(error => {
       console.warn("Could not load player ability percentiles", error);
       if (view.isConnected) radar.innerHTML = '<p class="ab-message">能力百分位暫時無法載入。</p>';
@@ -425,7 +429,7 @@ export function renderAbility(container, playerId, rows, scope) {
       });
     const performance = view.querySelector("#ab-performance");
     Promise.all([profile.catch(() => null), savant]).then(([data, comparison]) => {
-      if (view.isConnected) showPerformance(performance, wholeSeason, role, data, comparison?.woba?.[playerId]);
+      if (view.isConnected) showPerformance(performance, wholeSeason, role, data, comparison?.woba?.[playerId], year);
     });
     const pitchPanel = view.querySelector("#ab-pitches");
     const extra = view.querySelector("#ab-extra");
