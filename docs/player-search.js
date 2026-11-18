@@ -53,7 +53,7 @@ export function searchPlayers(index, value) {
 
 export function playerSearchUrl(player) {
   if (!player.id || (player.history && player.career.last < 1876)) {
-    return "history.html?" + new URLSearchParams(player.history);
+    return "search.html?" + new URLSearchParams({ mode: "team", ...player.history });
   }
   const params = new URLSearchParams({ id: player.id });
   if (player.roster) {

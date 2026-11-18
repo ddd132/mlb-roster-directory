@@ -1,6 +1,7 @@
+import { syncFinderNavigation, withFinderReturn } from "./finder-links.js";
 import { loadArchive } from "./history-data.js";
 import { fetchLiveRoster, fetchSnapshot, readLastRoster } from "./mlb.js?v=5";
-import { buildPlayerIndex, playerSearchUrl, searchPlayers } from "./player-search.js";
+import { buildPlayerIndex, playerSearchUrl, searchPlayers } from "./player-search.js?v=2";
 
 const byId = id => document.getElementById(id);
 const form = byId("player-name-search");
@@ -47,7 +48,7 @@ function resultRow(player) {
   const li = document.createElement("li");
   const link = document.createElement("a");
   link.className = "player-search-result";
-  link.href = playerSearchUrl(player);
+  link.href = withFinderReturn(playerSearchUrl(player));
   link.dataset.player = player.id ?? player.history.player;
 
   const description = document.createElement("span");
@@ -138,9 +139,11 @@ function refreshQuery() {
   if (next !== query) limit = pageSize;
   query = next;
   const url = new URL(location.href);
+  url.searchParams.set("mode", "name");
   if (query) url.searchParams.set("q", query);
   else url.searchParams.delete("q");
   history.replaceState(null, "", url);
+  syncFinderNavigation();
   if (query) {
     void loadDirectory();
     void loadRoster();

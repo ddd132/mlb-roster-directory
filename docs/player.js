@@ -1,3 +1,4 @@
+import { finderReturnUrl } from "./finder-links.js";
 import { countryName, escape, fetchPerson, fetchSeasonStats, fetchSnapshot, handedness, installPhotoFallback, normalizePerson, readLastRoster, teamLogo } from "./mlb.js?v=5";
 
 import { advancedDefinitions, loadAdvanced, seasonMetrics } from "./advanced.js";
@@ -11,6 +12,7 @@ const statsMode = byId("stats-mode");
 const splitCheck = byId("split-check");
 const params = new URLSearchParams(location.search);
 const fromMinors = params.get("from") === "minors";
+const finderBack = finderReturnUrl(params);
 const playerId = Number(params.get("id"));
 const validId = /^\d{1,10}$/.test(params.get("id") ?? "") && playerId > 0;
 const labels = { regular: "MLB 例行賽", postseason: "MLB 季後賽", minors: "小聯盟" };
@@ -102,7 +104,7 @@ function showIdentity(player, team, bioClub) {
 
   const backLink = byId("back-to-roster");
   const backTeam = team?.abbr ?? params.get("team");
-  if (!fromMinors) backLink.href = backTeam ? `./?team=${encodeURIComponent(backTeam)}#roster` : "./#roster";
+  if (!fromMinors && !finderBack) backLink.href = backTeam ? `./?team=${encodeURIComponent(backTeam)}#roster` : "./#roster";
 
   const place = [player.birthCity, player.birthRegion, countryName(player.birthCountry)].filter(Boolean).join(" · ");
   const bio = [
@@ -360,7 +362,12 @@ function noPlayer() {
 
 async function start() {
   installPhotoFallback();
-  if (fromMinors) {
+  if (finderBack) {
+    const back = byId("back-to-roster");
+    back.href = finderBack;
+    const origin = new URLSearchParams(params.get("finder"));
+    back.textContent = origin.get("mode") === "name" ? "回姓名搜尋" : "回該季球隊名單";
+  } else if (fromMinors) {
     const backParams = new URLSearchParams();
     if (params.has("team")) backParams.set("team", params.get("team"));
     if (params.has("minorView")) backParams.set("view", params.get("minorView"));

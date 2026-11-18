@@ -9,7 +9,7 @@
   <link rel="icon" href="assets/baseball.png" type="image/png">
   <link rel="preload" href="assets/inter.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preconnect" href="https://img.mlbstatic.com" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
   <script type="module" src="app.js?v=7"></script>
 </head>
 <body id="top" class="home-page">
@@ -35,7 +35,7 @@
               <li>
                 <a class="feature-link" href="search.html" aria-labelledby="feature-search-title">
                   <span class="feature-mark" aria-hidden="true"><span class="icon icon-search"></span></span>
-                  <strong class="feature-label" id="feature-search-title">全站球員搜尋</strong>
+                  <strong class="feature-label" id="feature-search-title">球員搜尋與歷年名單</strong>
                   <span class="icon icon-chevron feature-chevron" aria-hidden="true"></span>
                 </a>
               </li>
@@ -57,13 +57,6 @@
                 <a class="feature-link" href="minors.html" data-minors-link aria-labelledby="feature-minors-title">
                   <span class="feature-mark" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></svg></span>
                   <strong class="feature-label" id="feature-minors-title">小聯盟</strong>
-                  <span class="icon icon-chevron feature-chevron" aria-hidden="true"></span>
-                </a>
-              </li>
-              <li>
-                <a class="feature-link" href="history.html" aria-labelledby="feature-history-title">
-                  <span class="feature-mark" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18m-13 4h3m2 0h3m-8 3h3"/></svg></span>
-                  <strong class="feature-label" id="feature-history-title">歷年球隊名單</strong>
                   <span class="icon icon-chevron feature-chevron" aria-hidden="true"></span>
                 </a>
               </li>
@@ -113,12 +106,13 @@
           <p class="eyebrow"><span></span>MLB <span class="eyebrow-divider"></span> <b id="season">2026</b> 球季</p>
           <h1 id="page-title">大聯盟球員圖鑑</h1>
           <form class="search-form" id="player-search" role="search">
-            <label for="search-input" class="visually-hidden">搜尋全部球隊的球員</label>
+            <label for="search-input" class="visually-hidden">搜尋現役 40 人名單的球員</label>
             <span class="icon icon-search" aria-hidden="true"></span>
-            <input id="search-input" name="q" type="search" autocomplete="off" spellcheck="false" placeholder="搜尋球員姓名（Ohtani、大谷翔平）" disabled>
+            <input id="search-input" name="q" type="search" autocomplete="off" spellcheck="false" placeholder="搜尋現役球員姓名（Ohtani、大谷翔平）" disabled>
             <button type="button" id="clear-search" class="search-clear" aria-label="清除搜尋" hidden><span class="icon icon-close" aria-hidden="true"></span></button>
             <button class="search-submit" type="submit" disabled>搜尋</button>
           </form>
+          <a class="home-finder-link" href="search.html?mode=team">按球隊與球季找球員 <span aria-hidden="true">→</span></a>
         </div>
         <div class="hero-facts" aria-label="名單涵蓋範圍">
           <div class="fact-numbers">

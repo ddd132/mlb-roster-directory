@@ -222,6 +222,8 @@ summary::-webkit-details-marker { display: none; }
   color: #fffdfa;
 }
 .hero-copy .search-form { margin-top: 18px; }
+.home-finder-link { display: inline-flex; gap: 7px; align-items: center; min-height: 44px; color: white; font-size: 14px; font-weight: 700; text-underline-offset: 4px; }
+.home-finder-link:focus-visible { outline-color: var(--orange-light); }
 
 .search-form {
   min-height: 52px;

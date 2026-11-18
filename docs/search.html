@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101d2e">
-  <meta name="description" content="用英文姓名或常用中文譯名查詢現役、歷史與小聯盟球員。">
-  <title>全站球員搜尋｜球員圖鑑</title>
+  <meta name="description" content="按球季、球隊與守位瀏覽大聯盟歷年出賽名單，或用球員姓名搜尋現役、歷史及小聯盟球員。">
+  <title>球員搜尋與歷年名單｜球員圖鑑</title>
   <link rel="icon" href="assets/baseball.png" type="image/png">
-  <link rel="stylesheet" href="styles.css?v=6">
-  <link rel="stylesheet" href="search.css">
-  <script type="module" src="search.js"></script>
+  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="search.css?v=2">
+  <script type="module" src="finder.js"></script>
 </head>
 <body>
-  <a class="skip-link" href="#player-name-query">跳到搜尋</a>
+  <a class="skip-link" href="#finder-modes">跳到查找方式</a>
   <header class="site-header search-header">
     <div class="shell header-inner">
       <a class="brand" href="./" aria-label="球員圖鑑首頁">
@@ -22,28 +22,47 @@
       <a class="source-link" href="./">回首頁</a>
     </div>
   </header>
-
   <main>
     <div class="search-hero">
       <div class="shell search-shell">
-        <h1>全站球員搜尋</h1>
-        <p>搜尋現役 40 人名單、歷年大聯盟球員和小聯盟球員。</p>
-        <form id="player-name-search" class="player-search-form" role="search">
-          <label class="visually-hidden" for="player-name-query">球員姓名</label>
-          <input id="player-name-query" name="q" type="search" maxlength="120" placeholder="王建民、Chien-Ming Wang" autocomplete="off" spellcheck="false">
-          <button type="submit">搜尋</button>
-        </form>
+        <h1>球員搜尋與歷年名單</h1>
+        <p>選一年、一支球隊，從出賽名單找球員。記得名字也可以直接搜尋。</p>
+        <nav class="finder-modes" id="finder-modes" aria-label="查找球員的方式">
+          <a data-finder-mode="team" href="search.html?mode=team">按球隊與球季</a>
+          <a data-finder-mode="name" href="search.html?mode=name">按姓名搜尋</a>
+        </nav>
       </div>
     </div>
     <div class="shell search-shell search-content">
-      <section aria-label="搜尋結果">
+      <section id="team-panel" aria-label="歷年球隊名單" hidden>
+        <div class="history-controls" id="history-filters" hidden>
+          <label for="history-year">球季<select id="history-year"></select></label>
+          <label for="history-league">聯盟<select id="history-league" disabled></select></label>
+          <label for="history-team">球隊<select id="history-team" disabled></select></label>
+          <label for="history-position">主要守位<select id="history-position" disabled><option value="">全部守位</option></select></label>
+          <label for="history-search" class="history-search-label">在名單內找人<input id="history-search" type="search" maxlength="120" placeholder="輸入部分姓名（選填）" autocomplete="off"></label>
+        </div>
+        <div id="history-results" aria-busy="true"><p class="loading-message" role="status">正在載入球隊名單…</p></div>
+        <p class="player-search-sources"><a id="history-standings" href="standings.html">查看該季戰績</a> · <a href="./#roster">現役 40 人名單</a></p>
+        <p class="player-search-sources">1871–2025 年名單來自 <a href="https://sabr.org/lahman-database/">Lahman Baseball Database</a>，含 Seamheads 黑人聯盟紀錄。原始資料 © 1996–2025 SABR，整理後的名單採 <a href="https://creativecommons.org/licenses/by-sa/3.0/">CC BY-SA 3.0</a>。球員 ID 對照來自 <a href="https://github.com/chadwickbureau/register">Chadwick Bureau Register（ODC-By）</a>。2026 年起使用 <a href="https://www.mlb.com/stats/">MLB 官方出賽資料</a>。</p>
+      </section>
+      <section id="name-panel" aria-label="全站球員姓名搜尋" hidden>
+        <form id="player-name-search" class="name-form" role="search">
+          <label for="player-name-query">球員姓名</label>
+          <div class="player-search-form">
+            <input id="player-name-query" name="q" type="search" maxlength="120" placeholder="王建民、Chien-Ming Wang" autocomplete="off" spellcheck="false">
+            <button type="submit">搜尋</button>
+          </div>
+          <p class="field-hint">可搜尋現役、歷年大聯盟及小聯盟球員，支援英文姓名與部分中文譯名。</p>
+        </form>
         <p id="player-search-status" class="player-search-status" role="status"></p>
         <ul id="player-search-results" class="player-search-results" hidden></ul>
         <button type="button" id="player-search-more" class="show-more" hidden>顯示更多球員</button>
         <button type="button" id="player-search-retry" class="retry-button" hidden>重試載入名單</button>
+        <p class="player-search-sources">歷史資料含 Seamheads 黑人聯盟紀錄，原始資料 © 1996–2025 SABR。 <a href="https://sabr.org/lahman-database/">Lahman Baseball Database</a>（<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC BY-SA 3.0</a>） · <a href="https://github.com/chadwickbureau/register">Chadwick Bureau Register</a>（ODC-By） · <a href="https://www.mlb.com/stats/">MLB</a></p>
       </section>
-      <p class="player-search-sources">歷史資料含 Seamheads 黑人聯盟紀錄，原始資料 © 1996–2025 SABR。 <a href="https://sabr.org/lahman-database/">Lahman Baseball Database</a>（<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC BY-SA 3.0</a>） · <a href="https://github.com/chadwickbureau/register">Chadwick Bureau Register</a>（ODC-By） · <a href="https://www.mlb.com/stats/">MLB</a></p>
-      <noscript>請啟用 JavaScript 以使用球員搜尋。</noscript>
+      <p id="finder-error" role="status" hidden>暫時無法載入，請<a href="">重新整理</a>。</p>
+      <noscript>請啟用 JavaScript 以查閱球隊名單或搜尋球員。</noscript>
     </div>
   </main>
 </body>
