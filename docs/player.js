@@ -10,6 +10,7 @@ const byId = id => document.getElementById(id);
 const scopeButtons = byId("scope-switch");
 const statSections = byId("stat-sections");
 const statsMode = byId("stats-mode");
+const trendButton = statsMode.querySelector('[data-view="trend"]') ?? addTrendButton();
 const splitCheck = byId("split-check");
 const params = new URLSearchParams(location.search);
 const fromMinors = params.get("from") === "minors";
@@ -69,6 +70,22 @@ const definitions = {
     ],
   },
 };
+
+function addTrendButton() {
+  // A cached profile page can still load the latest script from GitHub Pages.
+  const button = document.createElement("button");
+  button.type = "button";
+  button.dataset.view = "trend";
+  button.textContent = "生涯趨勢";
+  button.setAttribute("aria-pressed", "false");
+  statsMode.querySelector('[data-view="compare"]')?.before(button);
+  if (!button.isConnected) statsMode.append(button);
+  const stylesheet = document.createElement("link");
+  stylesheet.rel = "stylesheet";
+  stylesheet.href = "./career-trend.css?v=1";
+  document.head.append(stylesheet);
+  return button;
+}
 
 function shown(value) {
   return value === null || value === undefined || /^[-.]+$/.test(String(value)) && !/\d/.test(String(value))
@@ -312,7 +329,7 @@ function renderStats() {
   const view = regular || ability || compare || trend ? statsView : "standard";
   statsMode.hidden = false;
   statsMode.querySelector('[data-view="advanced"]').hidden = !regular || !regularAdvanced.length;
-  statsMode.querySelector('[data-view="trend"]').hidden = activeScope === "minors";
+  trendButton.hidden = activeScope === "minors";
   for (const button of statsMode.querySelectorAll("[data-view]")) {
     button.setAttribute("aria-pressed", String(!button.hidden && button.dataset.view === view));
   }
