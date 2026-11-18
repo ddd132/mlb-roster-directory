@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101d2e">
+  <meta name="description" content="用逐年折線比較大聯盟打擊和投球環境，查看三振率、保送率、OPS、防禦率等聯盟平均。">
+  <title>聯盟平均與趨勢｜球員圖鑑</title>
+  <link rel="icon" href="assets/baseball.png" type="image/png">
+  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="league-trends.css">
+  <script type="module" src="league-trends.js"></script>
+</head>
+<body class="tr-page">
+  <a class="skip-link" href="#tr-main">跳到聯盟趨勢</a>
+  <header class="site-header"><div class="shell tr-header">
+    <a class="brand" href="./" aria-label="球員圖鑑首頁"><img class="brand-mark" src="assets/baseball.png" alt="" width="36" height="36"><span>球員圖鑑</span></a>
+    <a class="source-link" href="./">回首頁</a>
+  </div></header>
+  <main class="shell tr-main" id="tr-main">
+    <div class="tr-intro">
+      <div><h1>聯盟平均與趨勢</h1><p id="tr-scope">MLB 例行賽 · 逐年統計</p></div>
+      <div class="tr-tabs" role="group" aria-label="數據類別">
+        <button type="button" data-role="hitting" aria-pressed="true">打擊</button>
+        <button type="button" data-role="pitching" aria-pressed="false">投球</button>
+      </div>
+    </div>
+    <p id="tr-status" role="status">正在載入歷年資料…</p>
+    <div id="tr-dashboard" hidden>
+      <div class="tr-controls" aria-label="圖表篩選">
+        <label>主要指標<select id="tr-metric"></select></label>
+        <label>同圖比較<select id="tr-compare"></select></label>
+        <label>聯盟<select id="tr-league"></select></label>
+        <div class="tr-period">
+          <label>從<select id="tr-from"></select></label>
+          <label>到<select id="tr-to"></select></label>
+        </div>
+      </div>
+      <section class="tr-chart-card" aria-labelledby="tr-title">
+        <div class="tr-chart-header">
+          <div><p id="tr-chart-scope"></p><h2 id="tr-title"></h2></div>
+          <div id="tr-legend" class="tr-legend" aria-label="圖例"></div>
+        </div>
+        <div class="tr-chart" id="tr-chart" tabindex="0" role="group" aria-label="逐年折線圖，使用左右方向鍵選擇球季">
+          <svg id="tr-svg" role="img" aria-labelledby="tr-title tr-chart-description"></svg>
+          <p id="tr-chart-description" class="visually-hidden"></p>
+          <p class="tr-empty" id="tr-empty" hidden>所選範圍沒有完整紀錄。可切換指標或年份。</p>
+        </div>
+        <div class="tr-selection">
+          <div class="tr-season-step">
+            <button id="tr-prev" type="button" aria-label="上一個球季">‹</button>
+            <label class="visually-hidden" for="tr-year">查看球季</label><select id="tr-year"></select>
+            <button id="tr-next" type="button" aria-label="下一個球季">›</button>
+          </div>
+          <div id="tr-reading" class="tr-reading" aria-live="polite"></div>
+        </div>
+      </section>
+      <section class="tr-summary" aria-labelledby="tr-annual-title">
+        <div class="tr-section-title"><h2 id="tr-annual-title"></h2><p id="tr-sample"></p></div>
+        <div class="tr-metrics" id="tr-metrics"></div>
+      </section>
+      <details class="tr-details">
+        <summary>歷年數值表</summary>
+        <div class="tr-table-wrap"><table><thead id="tr-thead"></thead><tbody id="tr-tbody"></tbody></table></div>
+      </details>
+      <details class="tr-details tr-method"><summary>計算方式與資料來源</summary>
+        <div><p id="tr-formula"></p>
+        <p>先加總同季全聯盟的次數，再計算比率。打擊的三振率與保送率以打席為分母，投球則以面對打者數為分母。每隊每場數據以球隊出賽場次為分母，一場對戰兩隊各計一次。投球局數由出局數換算。</p>
+        <p>全聯盟採本站歷年名單的收錄範圍，含 1871–1875 年國家協會及有史料的黑人聯盟例行賽。聯盟依當季球隊歸屬劃分。缺少足以計算的紀錄時，數字顯示「—」，折線在該年中斷。</p>
+        <p>1871–2025 年球隊總數取自 <a href="https://sabr.org/lahman-database/" target="_blank" rel="noopener noreferrer">SABR Lahman Baseball Database</a>（© SABR，彙整資料依 <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 3.0</a> 分享）。打席與面對打者數依 <a href="https://www.retrosheet.org/gamelogs/index.html" target="_blank" rel="noopener noreferrer">Retrosheet 逐場紀錄</a>彙整。2026 年資料採 <a href="https://www.mlb.com/stats/team/2026" target="_blank" rel="noopener noreferrer">MLB 球隊打擊</a>、<a href="https://www.mlb.com/stats/team/pitching/2026" target="_blank" rel="noopener noreferrer">投球資料</a>及 <a href="https://www.baseball-reference.com/leagues/majors/2026.shtml" target="_blank" rel="noopener noreferrer">Baseball-Reference 聯盟合計</a>。</p>
+        </div>
+      </details>
+      <p class="tr-credit" lang="en">The information used here was obtained free of charge from and is copyrighted by Retrosheet. Interested parties may contact Retrosheet at <a href="https://www.retrosheet.org/">www.retrosheet.org</a>.</p>
+    </div>
+    <noscript><p>請啟用 JavaScript 以切換指標和查看折線圖。</p></noscript>
+  </main>
+</body>
+</html>

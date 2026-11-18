@@ -1,4 +1,4 @@
-import { countryName, escape, fetchLiveRoster, fetchSnapshot, installPhotoFallback, readLastRoster, rememberRoster, rosterCsv, taipeiTime, teamLogo as logo } from "./mlb.js?v=3";
+import { countryName, escape, fetchLiveRoster, fetchSnapshot, installPhotoFallback, readLastRoster, rememberRoster, rosterCsv, taipeiTime, teamLogo as logo } from "./mlb.js?v=5";
 import { createTransactionsView, officialTransactionsUrl } from "./transactions.js?v=3";
 
 const byId = id => document.getElementById(id);
@@ -169,7 +169,7 @@ function jerseyMarkup(player) {
 
 function playerCards(players, team, eager = false) {
   return `<div class="player-grid" style="--team: ${escape(team.color)}">
-    ${players.map((player, index) => `<a class="player-card" data-player="${player.id}" href="player.html?id=${player.id}&amp;team=${escape(team.abbr)}">
+    ${players.map((player, index) => `<a class="player-card" data-player="${escape(player.id)}" href="player.html?id=${encodeURIComponent(player.id)}&amp;team=${escape(team.abbr)}">
       <div class="player-art">
         ${jerseyMarkup(player)}
         ${photoMarkup(player, eager && index < 8)}

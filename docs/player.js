@@ -1,4 +1,4 @@
-import { countryName, escape, fetchPerson, fetchSeasonStats, fetchSnapshot, handedness, installPhotoFallback, normalizePerson, readLastRoster, teamLogo } from "./mlb.js";
+import { countryName, escape, fetchPerson, fetchSeasonStats, fetchSnapshot, handedness, installPhotoFallback, normalizePerson, readLastRoster, teamLogo } from "./mlb.js?v=5";
 
 import { advancedDefinitions, loadAdvanced, seasonMetrics } from "./advanced.js";
 import { renderPercentiles } from "./percentiles.js?v=3";

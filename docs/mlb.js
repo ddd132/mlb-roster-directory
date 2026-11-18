@@ -67,12 +67,59 @@ function fetchSnapshot() {
   return requestJson("data/rosters.json");
 }
 
+function cachedPlayer(row, date, seen) {
+  if (!Number.isSafeInteger(row?.id) || row.id <= 0 || seen.has(row.id)
+    || typeof row.name !== "string" || !row.name.trim() || typeof row.position !== "string"
+    || !Array.isArray(row.searchAliases) || !row.searchAliases.every(label => typeof label === "string")) {
+    throw new Error("Invalid cached player");
+  }
+  const textFields = ["firstName", "lastName", "jersey", "positionName", "birthCity", "birthRegion",
+    "birthCountry", "height", "bats", "throws", "birthDate", "debutDate"];
+  if (textFields.some(key => row[key] != null && typeof row[key] !== "string")
+    || [row.weightLb, row.draftYear].some(value => value != null && !Number.isSafeInteger(value))
+    || (row.birthDate != null && !/^\d{4}-\d{2}-\d{2}$/.test(row.birthDate))) {
+    throw new Error("Invalid cached player details");
+  }
+  const status = row.status;
+  if (status != null && (typeof status.code !== "string" || typeof status.description !== "string")) {
+    throw new Error("Invalid cached player status");
+  }
+  seen.add(row.id);
+  const known = Object.fromEntries(textFields.map(key => [key, row[key] ?? null]));
+  const profilePath = typeof row.profileUrl === "string" && row.profileUrl.startsWith(MLB_ORIGIN + "/player/")
+    ? row.profileUrl.slice((MLB_ORIGIN + "/player/").length) : "";
+  Object.assign(known, {
+    name: row.name, searchAliases: row.searchAliases, weightLb: row.weightLb, draftYear: row.draftYear,
+    status: status ? {code: status.code, description: status.description} : null,
+    profileUrl: new RegExp("^(?:[a-z0-9-]+-)?" + row.id + "$").test(profilePath)
+      ? MLB_ORIGIN + "/player/" + profilePath : MLB_ORIGIN + "/player/" + row.id,
+  });
+  return normalizePerson({id: row.id}, {abbreviation: row.position, name: row.positionName}, row.jersey, known, date);
+}
+
 function readLastRoster(base) {
   try {
     const cached = JSON.parse(localStorage.getItem(LIVE_CACHE_KEY));
-    if (cached?.rosterType === base.rosterType
-      && cached.teams?.map(team => team.id).join(",") === base.teams.map(team => team.id).join(",")
-      && Date.parse(cached.capturedAt) > Date.parse(base.capturedAt)) return cached;
+    const time = Date.parse(cached?.capturedAt);
+    if (cached?.rosterType !== base.rosterType || !(time > Date.parse(base.capturedAt))
+      || time > Date.now() + 300_000 || !Array.isArray(cached.teams) || cached.teams.length !== base.teams.length) return base;
+    const rosterDate = taipeiDate(new Date(time));
+    const seen = new Set();
+    const teams = base.teams.map((team, i) => {
+      const row = cached.teams[i];
+      if (row?.id !== team.id || !Array.isArray(row.players) || !row.players.length || row.players.length > 40) {
+        throw new Error("Invalid cached team");
+      }
+      const exemptions = Object.entries(row.exemptStatusCounts ?? {});
+      if (!exemptions.every(([key, count]) => /^[A-Z0-9-]+$/.test(key) && Number.isSafeInteger(count) && count >= 0)) {
+        throw new Error("Invalid cached roster counts");
+      }
+      return {...team, exemptStatusCounts: Object.fromEntries(exemptions),
+        sourceUrl: apiUrl(`/teams/${team.id}/roster`, {rosterType: "40Man", fields: ROSTER_FIELDS}),
+        players: row.players.map(player => cachedPlayer(player, rosterDate, seen))};
+    });
+    return {...base, teams, rosterDate, season: Number(rosterDate.slice(0, 4)), capturedAt: new Date(time).toISOString(),
+      playerCount: seen.size, teamPagesVerified: false};
   } catch {
     // The bundled fallback is available even when browser storage is disabled.
   }
@@ -100,7 +147,7 @@ function ageAt(birthDate, date) {
 
 function normalizePerson(person, position, jersey, known = {}, date = taipeiDate()) {
   const code = position?.abbreviation ?? known.position ?? "—";
-  const [positionGroup, positionZh] = positions[code] ?? ["other", position?.name ?? "—"];
+  const [positionGroup, positionZh] = Object.hasOwn(positions, code) ? positions[code] : ["other", position?.name ?? "—"];
   const height = person.height ?? known.height ?? null;
   const dimensions = /^(\d+)'\s*(\d+)"$/.exec(height ?? "");
   const weightLb = person.weight ?? known.weightLb ?? null;
