@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101d2e">
+  <meta name="description" content="用英文姓名或常用中文譯名查詢現役、歷史與小聯盟球員。">
+  <title>全站球員搜尋｜球員圖鑑</title>
+  <link rel="icon" href="assets/baseball.png" type="image/png">
+  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="search.css">
+  <script type="module" src="search.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#player-name-query">跳到搜尋</a>
+  <header class="site-header search-header">
+    <div class="shell header-inner">
+      <a class="brand" href="./" aria-label="球員圖鑑首頁">
+        <img class="brand-mark" src="assets/baseball.png" alt="" width="36" height="36">
+        <span>球員圖鑑</span>
+      </a>
+      <a class="source-link" href="./">回首頁</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="search-hero">
+      <div class="shell search-shell">
+        <h1>全站球員搜尋</h1>
+        <p>搜尋現役 40 人名單、歷年大聯盟球員和小聯盟球員。</p>
+        <form id="player-name-search" class="player-search-form" role="search">
+          <label class="visually-hidden" for="player-name-query">球員姓名</label>
+          <input id="player-name-query" name="q" type="search" maxlength="120" placeholder="王建民、Chien-Ming Wang" autocomplete="off" spellcheck="false">
+          <button type="submit">搜尋</button>
+        </form>
+      </div>
+    </div>
+    <div class="shell search-shell search-content">
+      <section aria-label="搜尋結果">
+        <p id="player-search-status" class="player-search-status" role="status"></p>
+        <ul id="player-search-results" class="player-search-results" hidden></ul>
+        <button type="button" id="player-search-more" class="show-more" hidden>顯示更多球員</button>
+        <button type="button" id="player-search-retry" class="retry-button" hidden>重試載入名單</button>
+      </section>
+      <p class="player-search-sources">歷史資料含 Seamheads 黑人聯盟紀錄，原始資料 © 1996–2025 SABR。 <a href="https://sabr.org/lahman-database/">Lahman Baseball Database</a>（<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC BY-SA 3.0</a>） · <a href="https://github.com/chadwickbureau/register">Chadwick Bureau Register</a>（ODC-By） · <a href="https://www.mlb.com/stats/">MLB</a></p>
+      <noscript>請啟用 JavaScript 以使用球員搜尋。</noscript>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,99 @@
+.search-header { border-bottom: 1px solid var(--line); }
+.search-shell { max-width: 920px; }
+.search-hero {
+  padding: clamp(24px, 5vw, 54px) 0 30px;
+  background: radial-gradient(ellipse at 95% 100%, #214c73, transparent 75%), var(--navy);
+  color: #fff;
+}
+.search-hero h1 {
+  margin: 0;
+  font-size: clamp(29px, 6vw, 48px);
+  line-height: 1.16;
+  letter-spacing: -.035em;
+}
+.search-hero p {
+  margin: 9px 0 19px;
+  color: #e0eaf4;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.player-search-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  max-width: 580px;
+}
+.player-search-form input,
+.player-search-form button {
+  min-height: 47px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+}
+.player-search-form input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 16px;
+}
+.player-search-form button {
+  padding-inline: clamp(11px, 3vw, 22px);
+  background: var(--orange-light);
+  color: var(--navy);
+  font-weight: 750;
+  white-space: nowrap;
+}
+.player-search-form button:hover { background: #ffb69d; }
+.player-search-form :focus-visible { outline-color: #ffccb9; }
+.search-content { padding-block: 16px 26px; }
+.player-search-status {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.player-search-status:empty { margin: 0; }
+.player-search-results {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+}
+.player-search-results li + li { border-top: 1px solid var(--line); }
+.player-search-result {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  min-height: 62px;
+  padding: 12px 15px;
+  text-decoration: none;
+}
+.player-search-result:hover { background: #f0f6fc; }
+.player-search-result:focus-visible { outline-offset: -4px; }
+.player-search-result strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 16px;
+  line-height: 1.3;
+}
+.player-search-result-meta {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.player-search-result .icon-chevron { color: var(--blue); transform: rotate(-90deg); }
+.search-content :is(.show-more, .retry-button) { margin-top: 10px; }
+.player-search-sources {
+  margin: 20px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+.player-search-sources a { text-underline-offset: 2px; }
