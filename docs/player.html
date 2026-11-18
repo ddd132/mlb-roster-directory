@@ -13,7 +13,8 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="player.css?v=3">
   <link rel="stylesheet" href="ability.css?v=1">
-  <script type="module" src="player.js?v=7"></script>
+  <link rel="stylesheet" href="team-details.css?v=1">
+  <script type="module" src="player.js?v=8"></script>
 </head>
 <body class="profile-page">
   <a class="skip-link" href="#season-stats">跳到歷年成績</a>
@@ -35,6 +36,7 @@
     </section>
 
     <div class="shell profile-body">
+      <div id="player-team-details" class="player-team-details" hidden></div>
       <section id="season-stats" aria-labelledby="stats-title">
         <div class="stats-heading">
           <h2 id="stats-title">歷年成績</h2>

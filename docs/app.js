@@ -1,5 +1,8 @@
 import { countryName, escape, fetchLiveRoster, fetchSnapshot, installPhotoFallback, readLastRoster, rememberRoster, rosterCsv, taipeiTime, teamLogo as logo } from "./mlb.js?v=5";
 import { createTransactionsView, officialTransactionsUrl } from "./transactions.js?v=3";
+import { contractCard, createContractsView } from "./contracts-view.js";
+import { createDepthView, validDepthPosition } from "./depth-view.js";
+import { loadTeamDetails, updateRosterRights } from "./team-details.js";
 
 const byId = id => document.getElementById(id);
 const searchForm = byId("player-search");
@@ -18,10 +21,16 @@ const viewLinks = featureMenu.querySelectorAll("a[data-team-view]");
 const minorsLinks = document.querySelectorAll("[data-minors-link]");
 const rosterToolbar = byId("roster-toolbar");
 const transactionsPanel = byId("transactions-panel");
+const depthPanel = byId("depth-panel");
+const contractsPanel = byId("contracts-panel");
 const downloadMenu = byId("downloads");
 const leagueNames = { AL: "美國聯盟", NL: "國家聯盟" };
 const transactionViews = new Set(["transactions", "league-transactions"]);
-const state = { team: null, league: "NL", view: "roster", position: "all", sort: "jersey", search: "", expanded: new Set() };
+const additionalViews = new Set([...transactionViews, "depth", "contracts"]);
+const state = {
+  team: null, league: "NL", view: "roster", position: "all", depthPosition: "SS", contractYear: null,
+  sort: "jersey", search: "", expanded: new Set(),
+};
 const collator = new Intl.Collator("en", { sensitivity: "base", numeric: true });
 const number = new Intl.NumberFormat("en-US");
 const LIVE_INTERVAL = 120_000;
@@ -37,7 +46,19 @@ let searchDelay;
 let bundledSnapshot;
 let lastAttempt = 0;
 let refreshing = false;
+let teamDetails;
+let detailsLoading = false;
 const transactionView = createTransactionsView(transactionsPanel, id => teamMap.get(id), LIVE_INTERVAL);
+const depthView = createDepthView(depthPanel, position => {
+  state.depthPosition = position;
+  updateURL();
+  renderView();
+});
+const contractsView = createContractsView(contractsPanel, () => state.contractYear, year => {
+  state.contractYear = year;
+  updateURL();
+  renderView();
+});
 
 function matchesForQuery(query) {
   const words = normalize(query).split(" ").filter(Boolean);
@@ -179,6 +200,7 @@ function playerCards(players, team, eager = false) {
         <div>
           <strong lang="en">${escape(player.name)}</strong>
           <small>${escape(player.positionZh)}${player.jersey === null ? "" : ` · #${escape(player.jersey)}`}</small>
+          ${contractCard(teamDetails, player.id, team)}
         </div>
         ${icon("chevron")}
       </div>
@@ -231,12 +253,14 @@ function renderRosterResults() {
 function renderView() {
   const currentView = state.search ? "roster" : state.view;
   const showTransactions = transactionViews.has(currentView);
+  const showDepth = currentView === "depth";
+  const showContracts = currentView === "contracts";
   for (const link of viewLinks) {
     const view = link.dataset.teamView;
     if (view === currentView) link.setAttribute("aria-current", "true");
     else link.removeAttribute("aria-current");
     const params = new URLSearchParams({ team: state.team.abbr });
-    if (transactionViews.has(view)) params.set("view", view);
+    if (additionalViews.has(view)) params.set("view", view);
     link.href = `?${params}#roster`;
   }
   for (const link of minorsLinks) link.href = `minors.html?team=${encodeURIComponent(state.team.abbr)}`;
@@ -244,16 +268,20 @@ function renderView() {
   for (const button of teamViewSwitch.querySelectorAll("button")) {
     button.setAttribute("aria-pressed", String(button.dataset.teamView === currentView));
   }
-  rosterToolbar.hidden = showTransactions;
-  resultList.hidden = showTransactions;
+  rosterToolbar.hidden = currentView !== "roster";
+  resultList.hidden = currentView !== "roster";
   transactionsPanel.hidden = !showTransactions;
+  depthPanel.hidden = !showDepth;
+  contractsPanel.hidden = !showContracts;
+  if (currentView !== "roster") byId("results-status").textContent = "";
   if (showTransactions) {
-    byId("results-status").textContent = "";
     transactionsPanel.setAttribute("aria-label", currentView === "league-transactions" ? "全聯盟異動" : "球隊異動");
     transactionView.open(currentView === "league-transactions" ? null : state.team);
   } else {
     transactionView.close();
-    renderRosterResults();
+    if (showDepth) depthView.open(state.team, snapshot.rosterDate, state.depthPosition, teamDetails);
+    else if (showContracts) contractsView.open(state.team, snapshot.season, teamDetails, detailsLoading);
+    else renderRosterResults();
   }
 }
 
@@ -268,8 +296,12 @@ function updateURL() {
   url.searchParams.set("team", state.team.abbr);
   if (state.search) url.searchParams.set("q", state.search);
   else url.searchParams.delete("q");
-  if (transactionViews.has(state.view)) url.searchParams.set("view", state.view);
+  if (additionalViews.has(state.view)) url.searchParams.set("view", state.view);
   else url.searchParams.delete("view");
+  if (state.view === "depth") url.searchParams.set("pos", state.depthPosition);
+  else url.searchParams.delete("pos");
+  if (state.view === "contracts" && state.contractYear) url.searchParams.set("contractYear", state.contractYear);
+  else url.searchParams.delete("contractYear");
   history.replaceState(null, "", url);
 }
 
@@ -456,6 +488,7 @@ async function refreshRoster() {
     const updated = await fetchLiveRoster(snapshot);
     const changed = JSON.stringify(updated.teams) !== JSON.stringify(snapshot.teams);
     snapshot = updated;
+    for (const team of updated.teams) updateRosterRights(teamDetails, team, updated.rosterDate);
     if (changed) {
       const focusedId = document.activeElement?.dataset.player;
       const focusedTeam = document.activeElement?.dataset.team;
@@ -480,6 +513,24 @@ async function refreshRoster() {
 function refreshDirectory() {
   void refreshRoster();
   void transactionView.refresh();
+  if (state.team && state.view === "depth" && !state.search) {
+    depthView.open(state.team, snapshot.rosterDate, state.depthPosition, teamDetails);
+  }
+}
+
+async function refreshTeamDetails() {
+  detailsLoading = true;
+  try {
+    teamDetails = await loadTeamDetails();
+    for (const team of snapshot.teams) updateRosterRights(teamDetails, team, snapshot.rosterDate);
+  } catch (error) {
+    console.warn("Could not load contract and position data", error);
+  } finally {
+    detailsLoading = false;
+    const focused = document.activeElement?.dataset.player;
+    renderView();
+    if (focused) resultList.querySelector(`[data-player="${focused}"]`)?.focus({ preventScroll: true });
+  }
 }
 
 function connectDownloads() {
@@ -509,7 +560,9 @@ async function start() {
     state.team = snapshot.teams.find(team => team.abbr === selectedAbbr) ?? teamMap.get(119);
     state.league = state.team.league;
     const requestedView = params.get("view");
-    state.view = transactionViews.has(requestedView) ? requestedView : "roster";
+    state.view = additionalViews.has(requestedView) ? requestedView : "roster";
+    state.depthPosition = validDepthPosition(params.get("pos"));
+    state.contractYear = Number(params.get("contractYear")) || null;
     state.search = params.get("q")?.trim() ?? "";
     searchInput.value = state.search;
     clearSearch.hidden = !state.search;
@@ -517,6 +570,7 @@ async function start() {
     setMobileTeams();
     renderTeamNavigation();
     renderHeading();
+    void refreshTeamDetails();
     renderView();
     connectEvents();
     for (const element of [searchInput, searchForm.querySelector("[type=submit]"), teamSelect, ...leagueSwitch.querySelectorAll("button")]) {

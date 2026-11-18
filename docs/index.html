@@ -10,7 +10,8 @@
   <link rel="preload" href="assets/inter.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preconnect" href="https://img.mlbstatic.com" crossorigin>
   <link rel="stylesheet" href="styles.css?v=7">
-  <script type="module" src="app.js?v=7"></script>
+  <link rel="stylesheet" href="team-details.css?v=1">
+  <script type="module" src="app.js?v=8"></script>
 </head>
 <body id="top" class="home-page">
   <a class="skip-link" href="#roster">跳到球員名單</a>
@@ -144,6 +145,8 @@
         </div>
         <div class="team-view-switch" id="team-view-switch" role="group" aria-label="查看球隊資料" hidden>
           <button type="button" data-team-view="roster" aria-pressed="true">40 人名單</button>
+          <button type="button" data-team-view="depth" aria-pressed="false">守位深度</button>
+          <button type="button" data-team-view="contracts" aria-pressed="false">合約狀態</button>
           <button type="button" data-team-view="transactions" aria-pressed="false">球隊異動</button>
           <button type="button" data-team-view="league-transactions" aria-pressed="false">全聯盟異動</button>
         </div>
@@ -169,6 +172,32 @@
         <div id="player-results" class="player-results">
           <p class="loading-message">正在載入 MLB 名單…</p>
         </div>
+        <section id="depth-panel" class="team-detail-panel" aria-labelledby="depth-title" hidden>
+          <div class="team-detail-heading">
+            <h3 id="depth-title">球隊守位深度</h3>
+            <a class="source-link" href="minors.html?view=team-prospects#minors" data-depth-prospect-link>球團 Top 30</a>
+          </div>
+          <div class="team-detail-controls">
+            <label for="depth-position">守備位置<select id="depth-position"></select></label>
+            <label class="team-detail-check"><input type="checkbox" checked>包含本季曾守此位置</label>
+          </div>
+          <p class="depth-summary team-detail-meta" role="status">正在讀取球團附屬隊與新秀榜…</p>
+          <div class="depth-grid"></div>
+          <p class="team-detail-meta">下放的 40 人名單球員也會出現在所屬的小聯盟層級。</p>
+        </section>
+        <section id="contracts-panel" class="team-detail-panel" aria-labelledby="contracts-title" hidden>
+          <div class="team-detail-heading">
+            <h3 id="contracts-title">大聯盟合約狀態</h3>
+            <a class="source-link" data-payroll-source href="https://www.fangraphs.com/roster-resource/breakdowns/payroll" target="_blank" rel="noopener noreferrer">合約來源</a>
+          </div>
+          <div class="team-detail-controls">
+            <label for="contract-season">球季<select id="contract-season" data-contract-year></select></label>
+            <label for="contract-status">合約狀態<select id="contract-status" data-contract-filter></select></label>
+          </div>
+          <p class="team-detail-meta" data-contract-summary role="status"></p>
+          <div data-contract-results></div>
+          <p class="team-detail-meta">合約年份、年資與仲裁分類參考 FanGraphs RosterResource，已公布的自由球員異動依 MLB。合約資料依標示日期更新。</p>
+        </section>
         <section id="transactions-panel" aria-label="球隊異動" hidden>
           <div class="roster-toolbar transaction-toolbar">
             <div class="position-filters" id="transaction-filters" role="group" aria-label="異動類型">

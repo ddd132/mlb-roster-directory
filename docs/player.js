@@ -1,4 +1,5 @@
 import { finderReturnUrl } from "./finder-links.js";
+import { contractDetail, contractState, loadTeamDetails, payrollLink, rule5State, statusTag } from "./team-details.js";
 import { countryName, escape, fetchPerson, fetchSeasonStats, fetchSnapshot, handedness, installPhotoFallback, normalizePerson, readLastRoster, teamLogo } from "./mlb.js?v=5";
 
 import { advancedDefinitions, loadAdvanced, seasonMetrics } from "./advanced.js";
@@ -12,6 +13,8 @@ const statsMode = byId("stats-mode");
 const splitCheck = byId("split-check");
 const params = new URLSearchParams(location.search);
 const fromMinors = params.get("from") === "minors";
+const fromDepth = params.get("from") === "depth";
+const fromContracts = params.get("from") === "contracts";
 const finderBack = finderReturnUrl(params);
 const playerId = Number(params.get("id"));
 const validId = /^\d{1,10}$/.test(params.get("id") ?? "") && playerId > 0;
@@ -23,6 +26,8 @@ let teams = new Map();
 let activeScope = "";
 let activeRows = [];
 let activePlayer;
+let activeTeam;
+let playerDetails;
 let identityReady;
 let statsView = ["advanced", "percentiles", "ability"].includes(params.get("view")) ? params.get("view") : "standard";
 let advancedRequest;
@@ -68,6 +73,46 @@ function shown(value) {
     ? "—" : value;
 }
 
+function renderTeamDetails() {
+  const container = byId("player-team-details");
+  if (!playerDetails || !activePlayer) return;
+  const roster = playerDetails.reserve.get(activePlayer.id);
+  const agent = playerDetails.free.get(activePlayer.id);
+  const orgId = activeTeam?.id ?? roster?.team ?? agent?.team;
+  const profileYear = Number(params.get("contractYear"));
+  const year = profileYear === playerDetails.season ? profileYear : playerDetails.season + 1;
+  const contract = contractState(playerDetails, activePlayer.id, orgId, year);
+  const onTeamRoster = activeTeam?.players.some(player => player.id === activePlayer.id);
+  const contractRecord = Boolean(onTeamRoster || roster || agent || contract.key !== "unknown");
+  const minorRecord = Boolean(playerDetails.rule5[activePlayer.id]);
+  const rule = minorRecord ? rule5State(playerDetails, activePlayer.id, orgId) : null;
+  const cells = [];
+  if (contractRecord) {
+    const notes = contractDetail(contract, year);
+    const source = contract.key === "free-agent" || contract.source === "MLB"
+      ? "https://www.mlb.com/news/mlb-2026-2027-free-agents-trades-offseason-transaction-tracker"
+      : payrollLink(playerDetails, contract.team ?? orgId, playerDetails.season);
+    cells.push(`<section class="player-detail-block" aria-label="合約狀態"><div class="player-detail-title">
+      <h2>${year} 球季合約</h2>${statusTag(contract.key, contract.label)}</div>
+      ${notes.length ? `<p>${escape(notes.join(" · "))}</p>` : ""}
+      <small class="detail-secondary">資料日期 ${escape(playerDetails.asOf)}</small>
+      <a href="${escape(source)}" target="_blank" rel="noopener noreferrer">合約來源</a></section>`);
+  }
+  if (rule) {
+    const yearText = rule.first
+      ? (rule.first === rule.last ? `推估初次符合 ${rule.first} 年` : `初次符合推估 ${rule.first}–${rule.last} 年`) : "";
+    const notes = [rule.detail, yearText, rule.signed ? `公開首簽紀錄 ${rule.signed}` : "",
+      Number.isInteger(rule.age) ? `6 月 5 日年齡 ${rule.age} 歲` : ""].filter(Boolean);
+    const source = rule.confirmed && playerDetails.officialRule5 ? playerDetails.officialRule5 : "https://www.mlb.com/glossary/transactions/rule-5-draft";
+    cells.push(`<section class="player-detail-block" aria-label="規則五資格"><div class="player-detail-title">
+      <h2>規則五資格</h2>${statusTag(rule.key, rule.label)}</div>
+      ${notes.length ? `<p>${escape(notes.join(" · "))}</p>` : ""}
+      <a href="${escape(source)}" target="_blank" rel="noopener noreferrer">資格依據</a></section>`);
+  }
+  container.innerHTML = cells.join("");
+  container.hidden = !cells.length;
+}
+
 function displayTeam(team) {
   if (!team?.id) return "";
   return historicalAbbreviations[team.name] ?? teams.get(team.id)?.abbr ?? team.name ?? "";
@@ -75,6 +120,7 @@ function displayTeam(team) {
 
 function showIdentity(player, team, bioClub) {
   activePlayer = player;
+  activeTeam = team;
   const club = team?.nameZh ?? bioClub?.name ?? "MLB 球員";
   const crest = team ? `<img src="${teamLogo(team)}" width="28" height="28" alt="">` : "";
   const uniform = player.jersey === null ? "" : ` · #${escape(player.jersey)}`;
@@ -104,7 +150,7 @@ function showIdentity(player, team, bioClub) {
 
   const backLink = byId("back-to-roster");
   const backTeam = team?.abbr ?? params.get("team");
-  if (!fromMinors && !finderBack) backLink.href = backTeam ? `./?team=${encodeURIComponent(backTeam)}#roster` : "./#roster";
+  if (!fromMinors && !finderBack && !fromDepth && !fromContracts) backLink.href = backTeam ? `./?team=${encodeURIComponent(backTeam)}#roster` : "./#roster";
 
   const place = [player.birthCity, player.birthRegion, countryName(player.birthCountry)].filter(Boolean).join(" · ");
   const bio = [
@@ -120,6 +166,7 @@ function showIdentity(player, team, bioClub) {
   byId("bio-grid").innerHTML = bio.map(([label, value]) =>
     `<div><dt>${label}</dt><dd>${escape(shown(value || null))}</dd></div>`).join("");
   byId("bio-details").hidden = false;
+  renderTeamDetails();
 }
 
 function positionOf(row) {
@@ -367,11 +414,19 @@ async function start() {
     back.href = finderBack;
     const origin = new URLSearchParams(params.get("finder"));
     back.textContent = origin.get("mode") === "name" ? "回姓名搜尋" : "回該季球隊名單";
+  } else if (fromDepth || fromContracts) {
+    const backParams = new URLSearchParams({ view: fromDepth ? "depth" : "contracts" });
+    if (params.has("team")) backParams.set("team", params.get("team"));
+    const key = fromDepth ? "pos" : "contractYear";
+    if (params.has(key)) backParams.set(key, params.get(key));
+    const back = byId("back-to-roster");
+    back.href = `./?${backParams}#roster`;
+    back.textContent = fromDepth ? "回守位深度" : "回合約狀態";
   } else if (fromMinors) {
     const backParams = new URLSearchParams();
     if (params.has("team")) backParams.set("team", params.get("team"));
     if (params.has("minorView")) backParams.set("view", params.get("minorView"));
-    for (const key of ["level", "q"]) {
+    for (const key of ["level", "rule5", "q"]) {
       if (params.has(key)) backParams.set(key, params.get(key));
     }
     const back = byId("back-to-roster");
@@ -382,6 +437,10 @@ async function start() {
     noPlayer();
     return;
   }
+  void loadTeamDetails().then(data => {
+    playerDetails = data;
+    renderTeamDetails();
+  }).catch(error => console.warn("Could not load player contract and Rule 5 data", error));
   const personRequest = fetchPerson(playerId).catch(error => {
     console.warn("Could not retrieve current MLB player details", error);
     return null;
