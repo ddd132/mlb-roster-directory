@@ -4,6 +4,7 @@
 import argparse
 import gzip
 import json
+import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -122,6 +123,31 @@ def add_minors(players, clubs):
             })
 
 
+HISTORIC_TEAM_NAMES = {
+    "Brooklyn Dodgers": "布魯克林道奇", "New York Giants": "紐約巨人",
+    "Boston Braves": "波士頓勇士", "Milwaukee Braves": "密爾瓦基勇士",
+    "Montreal Expos": "蒙特婁博覽會", "Cleveland Indians": "克里夫蘭印地安人",
+    "Florida Marlins": "佛羅里達馬林魚", "Tampa Bay Devil Rays": "坦帕灣魔鬼魚",
+    "Oakland Athletics": "奧克蘭運動家", "Philadelphia Athletics": "費城運動家",
+    "Kansas City Athletics": "堪薩斯市運動家", "Washington Senators": "華盛頓參議員",
+    "California Angels": "加州天使", "Anaheim Angels": "安那罕天使",
+    "Los Angeles Angels of Anaheim": "洛杉磯安那罕天使",
+}
+
+
+def write_finder_labels(players, clubs):
+    # Match the club's actual name in that season, including before a relocation.
+    teams = {**HISTORIC_TEAM_NAMES, **{club["name"]: club["nameZh"] for club in clubs}}
+    names = {}
+    for player in players:
+        aliases = [alias for alias in player.get("aliases", []) if re.search(r"[㐀-鿿]", alias)]
+        if aliases:
+            key = player.get("id") or player["history"]["player"]
+            names[str(key)] = aliases
+    labels = json.dumps({"teams": teams, "players": names}, ensure_ascii=False, indent=2, sort_keys=True)
+    (DOCS / "finder-labels.json").write_text(labels + "\n", encoding="utf-8")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--through", type=int, help="Most recent MLB season to include (default: roster snapshot year)")
@@ -158,6 +184,7 @@ def main():
         pending.replace(target)
     finally:
         pending.unlink(missing_ok=True)
+    write_finder_labels(players.values(), clubs.values())
     print(f"{len(players):,} historical and MiLB players · {len(compressed):,} compressed bytes")
 
 
