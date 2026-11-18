@@ -67,12 +67,14 @@ const state = {
   pool: ["all", "qualified"].includes(params.get("pool")) ? params.get("pool") : "auto",
   sort: ["asc", "desc"].includes(params.get("sort")) ? params.get("sort") : null,
   page: Math.max(1, Number.parseInt(params.get("page"), 10) || 1),
+  view: params.get("view") === "scatter" ? "scatter" : "rank",
 };
 
 const cache = new Map();
 const count = new Intl.NumberFormat("zh-TW");
 const normalize = value => value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim();
 let currentBoard;
+let currentScatter;
 let latestRequest = 0;
 
 function descriptor() {
@@ -125,7 +127,7 @@ async function fetchBoard(filters) {
   const { group, season, game, league, pool } = filters;
   const fields = new Set([
     "stats", "group", "type", "displayName", "totalSplits", "splits", "stat", "season", "player", "id", "fullName",
-    "team", "name", "numTeams", "position", "abbreviation", "plateAppearances", "battersFaced", "atBats", "outs",
+    "team", "name", "numTeams", "position", "abbreviation", "plateAppearances", "battersFaced", "atBats", "outs", "ops",
     ...Object.values(METRICS[group]).flat().map(([, , field]) => field),
   ]);
   const key = [group, season, game, league, pool].join("/");
@@ -196,10 +198,14 @@ function club(row) {
   return { label: row.team?.abbreviation ?? row.team?.name ?? "—", name: row.team?.name ?? "" };
 }
 
-function playerHref(row) {
+function playerHref(row, fromScatter = false) {
   const params = new URLSearchParams({ id: row.player.id });
   if (row.numTeams <= 1 && row.team?.abbreviation) params.set("team", row.team.abbreviation);
   if (state.game === "P") params.set("scope", "postseason");
+  if (fromScatter) {
+    params.set("from", "leaders");
+    params.set("leader", new URLSearchParams(location.search).toString());
+  }
   return `player.html?${escape(params.toString())}`;
 }
 
@@ -260,20 +266,40 @@ function renderRows() {
 function writeUrl() {
   const url = new URL(location.href);
   for (const [key, value] of Object.entries(state)) {
-    if (key !== "page") url.searchParams.set(key, value);
+    if (!["page", "view"].includes(key)) url.searchParams.set(key, value);
   }
+  if (state.view === "scatter") url.searchParams.set("view", "scatter");
+  else url.searchParams.delete("view");
   history.replaceState(null, "", url);
+}
+
+function clearScatterSelection(...fields) {
+  const url = new URL(location.href);
+  for (const field of fields) url.searchParams.delete(field);
+  history.replaceState(null, "", url);
+}
+
+function updateDisplay(scatter) {
+  for (const key of ["metric", "pool", "sort"]) element(key).closest("label").hidden = scatter;
+  element("season").closest(".leader-selects").classList.toggle("scatter-filters", scatter);
+  document.querySelector(".leader-footnote").hidden = scatter;
+  element("search").placeholder = scatter ? "輸入姓名或中文譯名" : "輸入球員英文姓名";
+  for (const button of element("display").querySelectorAll("button")) {
+    button.setAttribute("aria-pressed", String(button.dataset.leaderView === state.view));
+  }
 }
 
 async function refresh() {
   const request = ++latestRequest;
+  const scatter = state.view === "scatter";
   const metric = descriptor();
-  const pool = selectedPool(metric);
+  const pool = scatter ? "all" : selectedPool(metric);
   const filters = { ...state, pool };
   const results = element("results");
-  element("heading").textContent = `${state.season} ${metric[1]}排行`;
+  updateDisplay(scatter);
+  element("heading").textContent = scatter ? `${state.season} ${TYPES[state.group]}散點圖` : `${state.season} ${metric[1]}排行`;
   const source = new URL(`https://www.mlb.com/stats/${state.group === "pitching" ? "pitching/" : ""}${state.season}${state.game === "P" ? "/postseason" : ""}`);
-  if (METRICS[state.group].expanded.includes(metric)) source.searchParams.set("expanded", "true");
+  if (!scatter && METRICS[state.group].expanded.includes(metric)) source.searchParams.set("expanded", "true");
   element("source").href = source.href;
   element("sort").value = state.sort;
   element("pages").hidden = true;
@@ -281,12 +307,24 @@ async function refresh() {
   results.setAttribute("aria-busy", "true");
   results.innerHTML = '<p class="loading-message">正在讀取 MLB 官方成績…</p>';
   currentBoard = null;
+  currentScatter = null;
   writeUrl();
   try {
-    const rows = await fetchBoard(filters);
+    const scatterData = scatter ? import("./leader-scatter.js?v=1")
+      .then(async module => ({ module, data: await module.prepareScatter(filters) })) : null;
+    const [rows, chart] = await Promise.all([fetchBoard(filters), scatterData]);
     if (request !== latestRequest) return;
-    currentBoard = { metric, pool, ranked: rankRows(rows, metric, state.sort === "asc") };
-    renderRows();
+    if (chart) {
+      currentScatter = chart.module.renderScatter(results, {
+        rows, filters, definitions: METRICS[filters.group], data: chart.data, numeric, display, club,
+        profileHref: row => playerHref(row, true),
+        query: () => element("search").value,
+        report: message => { element("status").textContent = message; },
+      });
+    } else {
+      currentBoard = { metric, pool, ranked: rankRows(rows, metric, state.sort === "asc") };
+      renderRows();
+    }
   } catch (error) {
     if (request !== latestRequest) return;
     console.warn("Could not load MLB leaderboard", error);
@@ -308,6 +346,31 @@ function writeMetrics() {
   }
 }
 
+function addDisplaySwitch() {
+  // Build the switch here so older cached HTML can run the updated module.
+  const mode = document.createElement("div");
+  mode.className = "position-filters leader-display";
+  mode.id = PREFIX + "display";
+  mode.setAttribute("role", "group");
+  mode.setAttribute("aria-label", "檢視方式");
+  mode.innerHTML = '<button type="button" data-leader-view="rank">排行榜</button><button type="button" data-leader-view="scatter">散點圖</button>';
+  element("group").before(mode);
+
+  const css = "leader-scatter.css?v=1";
+  if (!document.querySelector(`link[href="${css}"]`)) {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = css;
+    document.head.append(link);
+  }
+  mode.addEventListener("click", event => {
+    const button = event.target.closest("[data-leader-view]");
+    if (!button || button.dataset.leaderView === state.view) return;
+    state.view = button.dataset.leaderView;
+    void refresh();
+  });
+}
+
 async function start() {
   const seasons = await getSeasons();
   if (!seasons.includes(state.season)) state.season = seasons[0];
@@ -315,11 +378,13 @@ async function start() {
   state.sort ??= defaultSort();
   element("season").innerHTML = seasons.map(year => `<option value="${year}">${year}</option>`).join("");
   element("search").value = params.get("q") ?? "";
+  addDisplaySwitch();
   for (const key of ["season", "game", "league", "pool", "sort"]) {
     const select = element(key);
     select.value = state[key];
     select.addEventListener("change", () => {
       state[key] = select.value;
+      if (key === "game") clearScatterSelection("min", "focus");
       state.page = 1;
       void refresh();
     });
@@ -332,6 +397,7 @@ async function start() {
     state.stat = DEFAULT_METRIC[next];
     state.sort = defaultSort();
     state.page = 1;
+    clearScatterSelection("x", "y", "min", "focus");
     writeMetrics();
     void refresh();
   });
@@ -343,7 +409,11 @@ async function start() {
   });
   element("search").addEventListener("input", () => {
     state.page = 1;
-    renderRows();
+    if (currentScatter) currentScatter.updateSearch();
+    else renderRows();
+  });
+  element("search").addEventListener("keydown", event => {
+    if (event.key === "Enter" && currentScatter) currentScatter.chooseFirst();
   });
   for (const [key, step] of [["prev", -1], ["next", 1]]) {
     element(key).addEventListener("click", () => {

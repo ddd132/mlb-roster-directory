@@ -4,13 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101d2e">
-  <meta name="description" content="依球季與聯盟查看 MLB 官方打擊、投球的單項排行榜。">
+  <meta name="description" content="依球季與聯盟查看 MLB 打擊、投球排行榜，或用雙指標散點圖比較全聯盟球員。">
   <title>MLB 單項排行榜｜球員圖鑑</title>
   <link rel="icon" href="assets/baseball.png" type="image/png">
   <link rel="preconnect" href="https://statsapi.mlb.com" crossorigin>
   <link rel="stylesheet" href="styles.css?v=4">
   <link rel="stylesheet" href="comparison.css?v=1">
-  <script type="module" src="leaders.js?v=2"></script>
+  <link rel="stylesheet" href="leader-scatter.css?v=1">
+  <script type="module" src="leaders.js?v=3"></script>
   <style>
     .leader-nav { min-height: 65px; display: flex; justify-content: space-between; align-items: center; }
     .leader-nav .source-link { white-space: nowrap; }
@@ -91,7 +92,7 @@
   </header>
   <main>
     <header class="leader-banner">
-      <div class="shell"><h1>MLB 單項排行榜</h1><p>打擊、投球的標準與擴充數據。</p></div>
+      <div class="shell"><h1>MLB 球員排行榜</h1><p>單項排行與全聯盟雙指標散點圖。</p></div>
     </header>
     <div class="shell leader-layout">
       <div class="leader-filters" aria-label="排行榜篩選">

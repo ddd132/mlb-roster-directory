@@ -487,12 +487,12 @@ async function start() {
   if (fromLeaders) {
     const origin = new URLSearchParams(params.get("leader"));
     const back = new URLSearchParams();
-    for (const key of ["group", "season", "game", "league", "pool", "stat", "sort", "page", "q"]) {
+    for (const key of ["group", "season", "game", "league", "pool", "stat", "sort", "page", "q", "view", "x", "y", "min", "focus"]) {
       if (origin.has(key)) back.set(key, origin.get(key));
     }
     const link = byId("back-to-roster");
     link.href = `leaders.html?${back}`;
-    link.textContent = "回排行榜";
+    link.textContent = origin.get("view") === "scatter" ? "回散點圖" : "回排行榜";
   } else if (finderBack) {
     const back = byId("back-to-roster");
     back.href = finderBack;
