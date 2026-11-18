@@ -138,9 +138,11 @@ HISTORIC_TEAM_NAMES = {
 def write_finder_labels(players, clubs):
     # Match the club's actual name in that season, including before a relocation.
     teams = {**HISTORIC_TEAM_NAMES, **{club["name"]: club["nameZh"] for club in clubs}}
+    preferred = {row["id"]: row["searchAliases"] for club in clubs for row in club["players"] if row["searchAliases"]}
     names = {}
     for player in players:
-        aliases = [alias for alias in player.get("aliases", []) if re.search(r"[㐀-鿿]", alias)]
+        candidates = [*preferred.get(player.get("id"), []), *player.get("aliases", [])]
+        aliases = [alias for alias in dict.fromkeys(candidates) if re.search(r"[㐀-鿿]", alias)]
         if aliases:
             key = player.get("id") or player["history"]["player"]
             names[str(key)] = aliases
