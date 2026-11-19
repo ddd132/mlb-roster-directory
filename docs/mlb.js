@@ -225,12 +225,13 @@ function rosterRows(payload, teamId) {
 }
 
 async function fetchLiveRoster(previous) {
+  if (globalThis.navigator?.onLine === false) throw new Error("MLB roster refresh requires a connection");
   const checkedAt = new Date();
   const rosterDate = taipeiDate(checkedAt);
   const known = new Map(previous.teams.flatMap(team => team.players.map(player => [player.id, player])));
   const liveTeams = await inBatches(previous.teams, 10, async team => {
     const sourceUrl = apiUrl(`/teams/${team.id}/roster`, { rosterType: "40Man", fields: ROSTER_FIELDS });
-    const roster = rosterRows(await requestJson(sourceUrl), team.id);
+    const roster = rosterRows(await requestJson(sourceUrl, { cache: "no-cache" }), team.id);
     return { team, sourceUrl, ...roster };
   });
   const players = liveTeams.flatMap(team => team.included);

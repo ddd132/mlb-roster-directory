@@ -4,6 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101d2e">
+  <link rel="manifest" href="app.webmanifest">
+  <link rel="apple-touch-icon" href="pwa-icon-180.png">
+  <link rel="stylesheet" href="pwa.css?v=1">
+  <script defer src="pwa.js?v=1"></script>
   <meta name="description" content="查詢 MLB 30 支球隊的官方 40 人名單、球員資料與升降、交易等球隊異動。">
   <title>球員圖鑑｜MLB 40 人名單</title>
   <link rel="icon" href="assets/baseball.png" type="image/png">
@@ -114,7 +118,10 @@
             <button type="button" id="clear-search" class="search-clear" aria-label="清除搜尋" hidden><span class="icon icon-close" aria-hidden="true"></span></button>
             <button class="search-submit" type="submit" disabled>搜尋</button>
           </form>
-          <a class="home-finder-link" href="search.html?mode=team">按球隊與球季找球員 <span aria-hidden="true">→</span></a>
+          <div class="pwa-hero-actions">
+            <a class="home-finder-link" href="search.html?mode=team">按球隊與球季找球員 <span aria-hidden="true">→</span></a>
+            <button type="button" class="pwa-install-trigger" data-pwa-install aria-haspopup="dialog" hidden>安裝 App</button>
+          </div>
         </div>
         <div class="hero-facts" aria-label="名單涵蓋範圍">
           <div class="fact-numbers">

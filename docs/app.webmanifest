@@ -1,0 +1,22 @@
+{
+  "id": "./",
+  "name": "大聯盟球員圖鑑",
+  "short_name": "球員圖鑑",
+  "description": "查詢 MLB 球隊名單、球員生涯數據、排行榜及聯盟圖表。",
+  "lang": "zh-Hant",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "theme_color": "#101d2e",
+  "background_color": "#f7f6f2",
+  "icons": [
+    { "src": "pwa-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "pwa-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "pwa-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "球員搜尋", "url": "./search.html" },
+    { "name": "排行榜", "url": "./leaders.html" },
+    { "name": "雙指標散點圖", "url": "./leaders.html?view=scatter" }
+  ]
+}
